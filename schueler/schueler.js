@@ -62,6 +62,7 @@ async function starten() {
   navigationVerdrahten();
   einrichtungVerdrahten();
   formularVerdrahten();
+  testmodusVerdrahten();
   $('#gesendet-weiter').addEventListener('click', () => {
     $('#gesendet').hidden = true;
     ansichtZeigen('verlauf');
@@ -98,6 +99,58 @@ function anwendungZeigen() {
   ausweisZeichnen();
   formularZeichnen();
   verlaufZeichnen();
+  testleisteZeichnen();
+}
+
+// ---------------------------------------------------------------- Testmodus
+
+const SCHLUESSEL_TEST = 'graduierung.schueler.testmodus';
+
+/**
+ * Testmodus für Joscha: einmal .../schueler/#test aufrufen, dann bleibt er auf
+ * diesem Gerät aktiv, bis er beendet wird. Erlaubt schnelles Durchspielen
+ * verschiedener Stufen, ohne jedes Mal die Löschabfrage zu beantworten.
+ * Auf Schülergeräten ist er nie aktiv -- dort ruft niemand #test auf.
+ */
+function testmodusAktiv() {
+  return localStorage.getItem(SCHLUESSEL_TEST) === 'ja';
+}
+
+function testmodusVerdrahten() {
+  if (adressangaben().includes('test')) localStorage.setItem(SCHLUESSEL_TEST, 'ja');
+  if (!testmodusAktiv()) return;
+
+  $('#test-stufe').innerHTML = katalog.stufen
+    .map((s) => `<option value="${s.id}">${s.name}</option>`)
+    .join('');
+
+  $('#test-stufe').addEventListener('change', (ereignis) => {
+    profilSchreiben({ ...profil, stufe: ereignis.target.value });
+    anwendungZeigen();
+    ansichtZeigen('ausweis');
+  });
+
+  $('#test-neu').addEventListener('click', () => {
+    localStorage.removeItem(SCHLUESSEL_PROFIL);
+    localStorage.removeItem(SCHLUESSEL_VERLAUF);
+    profil = null;
+    $('#eingabe-name').value = '';
+    einrichtungOeffnen();
+  });
+
+  $('#test-aus').addEventListener('click', () => {
+    localStorage.removeItem(SCHLUESSEL_TEST);
+    location.hash = '';
+    location.reload();
+  });
+}
+
+function testleisteZeichnen() {
+  const leiste = $('#testleiste');
+  leiste.hidden = !testmodusAktiv();
+  if (leiste.hidden) return;
+  $('#test-profil').textContent = `${profil.name} · ${profil.klasse}`;
+  $('#test-stufe').value = profil.stufe;
 }
 
 // ---------------------------------------------------------------- Einrichtung
@@ -134,13 +187,19 @@ function einrichtungOeffnen() {
 }
 
 /**
- * Die Klasse lässt sich über die Adresse vorbelegen: .../schueler/#8a
+ * Angaben aus der Adresse, kommagetrennt: .../schueler/#8a  ·  #test  ·  #8a,test
  * Bewusst als Fragment -- das wird nie an den Server gesendet und bleibt
  * damit auf dem Gerät. Spart beim QR-Einstieg ein Eingabefeld.
  */
+function adressangaben() {
+  return decodeURIComponent(location.hash.replace(/^#/, ''))
+    .split(',')
+    .map((teil) => teil.trim())
+    .filter(Boolean);
+}
+
 function klasseAusAdresse() {
-  const roh = decodeURIComponent(location.hash.replace(/^#/, '')).trim();
-  return /^[0-9]{1,2}[a-zA-Z]?$/.test(roh) ? roh : '';
+  return adressangaben().find((teil) => /^[0-9]{1,2}[a-zA-Z]?$/.test(teil)) ?? '';
 }
 
 function einrichtungAbschliessen() {
@@ -179,6 +238,10 @@ function ausweisZeichnen() {
   $('#ausweis-stufe').textContent = meine.name;
   $('#ausweis-motto').textContent = meine.motto;
 
+  const symbol = $('#ausweis-symbol');
+  symbol.src = `../symbole/stufen/${meine.id}.png`;
+  symbol.alt = ''; // rein schmückend -- der Stufenname steht daneben
+
   $('#liste-privilegien').innerHTML = katalog.stufen
     .filter((s) => s.reihenfolge <= meine.reihenfolge)
     .flatMap((s) => s.privilegien)
@@ -201,10 +264,12 @@ function ausweisZeichnen() {
 }
 
 function allesLoeschen() {
-  const sicher = confirm(
-    'Wirklich alles löschen?\n\nDein Name, deine Stufe und alle deine bisherigen ' +
-      'Einschätzungen werden von diesem Gerät entfernt. Das lässt sich nicht rückgängig machen.'
-  );
+  const sicher =
+    testmodusAktiv() ||
+    confirm(
+      'Wirklich alles löschen?\n\nDein Name, deine Stufe und alle deine bisherigen ' +
+        'Einschätzungen werden von diesem Gerät entfernt. Das lässt sich nicht rückgängig machen.'
+    );
   if (!sicher) return;
   localStorage.removeItem(SCHLUESSEL_PROFIL);
   localStorage.removeItem(SCHLUESSEL_VERLAUF);

@@ -33,6 +33,11 @@
 
 * { box-sizing: border-box; }
 
+/* Muss ganz oben stehen und muss !important sein: Jede eigene display-Regel
+   (etwa .einrichtung { display: grid }) würde das hidden-Attribut sonst
+   aushebeln -- ein Dialog ließe sich dann nicht mehr schließen. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -220,14 +225,65 @@ button {
 .stufen-name { font-weight: 600; }
 .stufen-motto { display: block; font-size: 0.88rem; color: var(--text-leise); font-weight: 400; }
 
+/* ---------- Testleiste (nur für Joscha, über #test) ---------- */
+
+.testleiste {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #3a2f12;
+  color: #f3e2b8;
+  font-size: 0.85rem;
+}
+
+.test-marke {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #f3c14b;
+  color: #3a2f12;
+  border-radius: 6px;
+  padding: 0.1rem 0.45rem;
+}
+
+.test-profil { flex: 1; min-width: 8rem; }
+
+.testleiste select,
+.testleiste button {
+  padding: 0.3rem 0.6rem;
+  min-height: 34px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #f3e2b8;
+  background: #5a4a1e;
+  border: 1px solid #7a6528;
+  border-radius: 7px;
+  width: auto;
+  background-image: none;
+}
+
 /* ---------- Kopf und Ansichten ---------- */
 
-.ansicht[hidden] { display: none; }
-
 .kopf {
+  position: relative;
   padding: calc(env(safe-area-inset-top) + 1.5rem) 1.25rem 1.5rem;
   background: var(--stufe);
   color: #fff;
+}
+
+.kopf-logo {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 1.25rem);
+  right: 1.25rem;
+  width: 118px;
+  height: auto;
+  opacity: 0.9;
+  filter: brightness(0) invert(1);
 }
 
 .kopf-oben {
@@ -249,12 +305,36 @@ button {
 /* ---------- Ausweis ---------- */
 
 .ausweis {
+  position: relative;
   background: var(--flaeche);
   border-radius: var(--radius);
   box-shadow: var(--schatten);
   border-left: 6px solid var(--stufe);
   padding: 1.5rem;
+  padding-right: 8.5rem;
   margin-top: -0.5rem;
+  min-height: 9.5rem;
+}
+
+.ausweis-symbol {
+  position: absolute;
+  top: 50%;
+  right: 1.25rem;
+  transform: translateY(-50%);
+  width: auto;
+  max-width: 6.5rem;
+  height: 6rem;
+  object-fit: contain;
+  object-position: right center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ausweis-symbol { filter: invert(1) brightness(1.15); }
+}
+
+@media (max-width: 22rem) {
+  .ausweis { padding-right: 1.5rem; }
+  .ausweis-symbol { display: none; }
 }
 
 .ausweis-oben { margin: 0; color: var(--text-leise); }
@@ -373,7 +453,6 @@ button {
   font-size: 0.95rem;
 }
 
-.tipp[hidden] { display: none; }
 .tipp-titel { margin: 0 0 0.4rem; font-weight: 600; }
 .tipp p { margin: 0 0 0.6rem; color: var(--text-leise); }
 .tipp ol { margin: 0; padding-left: 1.2rem; color: var(--text-leise); }

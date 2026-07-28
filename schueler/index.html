@@ -47,15 +47,27 @@
 <!-- Hauptanwendung ---------------------------------------------------------->
 <div id="anwendung" hidden>
 
+  <!-- Testleiste: nur mit #test in der Adresse -->
+  <div class="testleiste" id="testleiste" hidden>
+    <span class="test-marke">Testmodus</span>
+    <span class="test-profil" id="test-profil">–</span>
+    <select id="test-stufe" aria-label="Stufe wechseln"></select>
+    <button type="button" id="test-neu">Neues Profil</button>
+    <button type="button" id="test-aus">beenden</button>
+  </div>
+
   <!-- Ansicht: Mein Ausweis -->
   <section class="ansicht" id="ansicht-ausweis" aria-labelledby="titel-ausweis">
     <header class="kopf">
+      <img class="kopf-logo" src="../symbole/schullogo.png"
+           alt="Mittelschule Rednitzhembach" width="162" height="62">
       <p class="kopf-oben">Mein Ausweis</p>
       <h1 id="titel-ausweis" class="kopf-name">–</h1>
     </header>
 
     <div class="inhalt">
       <div class="ausweis" id="ausweis">
+        <img class="ausweis-symbol" id="ausweis-symbol" src="" alt="" width="160" height="160">
         <p class="ausweis-oben">Ich lerne</p>
         <p class="ausweis-stufe" id="ausweis-stufe">–</p>
         <p class="ausweis-motto" id="ausweis-motto"></p>

@@ -7,7 +7,7 @@
 // (Cache zuerst wäre schneller, würde aber alte Fassungen auf den iPads festhalten --
 // bei 25 Geräten, die man nicht einzeln entstauben kann, ein schlechter Tausch.)
 
-const FASSUNG = 'graduierung-v1';
+const FASSUNG = 'graduierung-v2';
 
 const VORRAT = [
   './',
@@ -23,6 +23,11 @@ const VORRAT = [
   './symbole/symbol-192.png',
   './symbole/symbol-512.png',
   './symbole/apple-touch-icon.png',
+  './symbole/schullogo.png',
+  './symbole/stufen/hafen.png',
+  './symbole/stufen/ankerplatz.png',
+  './symbole/stufen/boie.png',
+  './symbole/stufen/freie-see.png',
 ];
 
 self.addEventListener('install', (ereignis) => {
