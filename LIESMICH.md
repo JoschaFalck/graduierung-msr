@@ -9,13 +9,18 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     katalog.json           ← einzige Datenquelle: Stufen, Kriterien, Privilegien, Rückstufungstexte
     katalog.js               Laden, Stufenvererbung, Sammelzeilen, Rückstufungsbogen
     uebergabe.js             Format der Datei Kind → Lehrkraft (erzeugen, benennen, prüfen)
+    tresor.js                Verschlüsselung der Klassendatei (AES-GCM, PBKDF2)
+    klassendatei.js          Datenmodell: Lernende, Zeiträume, Einschätzungen, Import
   schueler/
     index.html               Ersteinrichtung, Ausweis, Selbsteinschätzung, Verlauf
     schueler.js
     stil.css
     manifest.webmanifest     macht die Seite auf dem iPad installierbar
-  lehrkraft/                 (noch nicht gebaut)
-  pruefen.mjs                30 Prüfungen -- `node app/pruefen.mjs`
+  lehrkraft/                 ENTWURF: Datei anlegen/öffnen, Übersicht, Einsammeln, Fremdeinschätzung
+    index.html
+    lehrkraft.js
+    stil.css
+  pruefen.mjs                52 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -102,3 +107,14 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
   Bibliothek ist eigener Aufwand — erst bauen, wenn die Praxis zeigt, dass es gebraucht wird.
 - **Dateiendung `.json`** ist zu prüfen: falls iPadOS beim AirDrop zickt, ist der Wechsel auf
   `.txt` eine Zeile in `uebergabe.js`.
+
+## Noch offen in der Lehrkraft-Anwendung
+
+Der Entwurf deckt den Zwei-Wochen-Rhythmus ab. Es fehlen:
+
+- **Coaching-Bogen** (S und L über vier Zeiträume nebeneinander, Abweichungen hervorgehoben)
+  und das **Coaching-Protokoll** mit Hoch-/Rückstufung
+- **Druckausgaben**: Coaching-Bogen im gewohnten Layout, personalisierter Ausweis
+- **Verlaufsansicht** je Kind (Stufenband über das Schuljahr)
+- **Wochen-Schnappschüsse** der Klassendatei (siehe KONZEPT.md Abschnitt 6)
+- Klassenliste bequem anlegen (aktuell einzeln über einen Eingabedialog)

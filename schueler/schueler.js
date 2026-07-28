@@ -293,11 +293,12 @@ function formularZeichnen() {
     nachStufe.get(k.stufe).push(k);
   }
 
+  let nummer = 0;
   $('#kriterien-liste').innerHTML = [...nachStufe]
     .map(
       ([stufenId, liste]) =>
         `<p class="gruppentitel">Verantwortung ${praeposition(stufenId)}</p>` +
-        liste.map(kriteriumFeld).join('')
+        liste.map((k) => kriteriumFeld(k, ++nummer)).join('')
     )
     .join('');
 
@@ -308,9 +309,10 @@ function formularZeichnen() {
   $('#beleg-text').value = '';
   $('#beleg-zaehler').textContent = '0 Zeichen';
   $('#einschaetzung-fehler').hidden = true;
+  fortschrittZeichnen();
 }
 
-function kriteriumFeld(k) {
+function kriteriumFeld(k, nummer) {
   const knoepfe = katalog.skala
     .map(
       (s) => `
@@ -322,11 +324,34 @@ function kriteriumFeld(k) {
     )
     .join('');
 
+  // Bewusst kein fieldset/legend: der legend wird vom Browser aus dem Rahmen
+  // geschnitten und lässt sich in einer Karte nicht zuverlässig platzieren.
+  // role="group" + aria-labelledby ist für Screenreader gleichwertig.
   return `
-    <fieldset class="kriterium" data-kriterium="${k.id}">
-      <legend>${k.text}</legend>
+    <div class="kriterium" data-kriterium="${k.id}" role="group" aria-labelledby="kt_${k.id}">
+      <p class="kriterium-text" id="kt_${k.id}"><span class="kriterium-nummer">${nummer}</span>${k.text}</p>
       <div class="skala">${knoepfe}</div>
-    </fieldset>`;
+    </div>`;
+}
+
+/** Zählt beantwortete Kriterien und aktualisiert Balken und Häkchen. */
+function fortschrittZeichnen() {
+  const felder = [...document.querySelectorAll('.kriterium')];
+  let fertig = 0;
+
+  for (const feld of felder) {
+    const beantwortet = !!feld.querySelector('input:checked');
+    feld.classList.toggle('beantwortet', beantwortet);
+    if (beantwortet) fertig++;
+  }
+
+  const gesamt = felder.length;
+  $('#fortschritt-zahl').textContent = `${fertig} von ${gesamt}`;
+  $('#fortschritt-fuellung').style.width = gesamt ? `${(fertig / gesamt) * 100}%` : '0';
+
+  const balken = $('#fortschritt-balken');
+  balken.setAttribute('aria-valuenow', fertig);
+  balken.setAttribute('aria-valuemax', gesamt);
 }
 
 function formularVerdrahten() {
@@ -341,6 +366,7 @@ function formularVerdrahten() {
 
   $('#kriterien-liste').addEventListener('change', (ereignis) => {
     ereignis.target.closest('.kriterium')?.classList.remove('offen');
+    fortschrittZeichnen();
   });
 }
 

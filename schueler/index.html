@@ -18,11 +18,10 @@
 <!-- Ersteinrichtung: nur beim allerersten Start ------------------------------>
 <div id="einrichtung" class="einrichtung" hidden>
   <div class="einrichtung-karte">
-    <picture>
-      <source srcset="../symbole/schullogo-weiss.png" media="(prefers-color-scheme: dark)">
-      <img class="karten-logo" src="../symbole/schullogo.png"
+    <span class="karten-logo-feld">
+      <img src="../symbole/schullogo.png"
            alt="Mittelschule Rednitzhembach" width="900" height="237">
-    </picture>
+    </span>
     <h1>Willkommen!</h1>
     <p class="lang">Hier schätzt du dich selbst ein – alle zwei Wochen.
       Sag mir zuerst, wer du bist.</p>
@@ -64,8 +63,10 @@
   <!-- Ansicht: Mein Ausweis -->
   <section class="ansicht" id="ansicht-ausweis" aria-labelledby="titel-ausweis">
     <header class="kopf">
-      <img class="kopf-logo" src="../symbole/schullogo-marke-weiss.png"
-           alt="Mittelschule Rednitzhembach" width="668" height="400">
+      <span class="kopf-logo-feld">
+        <img src="../symbole/schullogo.png"
+             alt="Mittelschule Rednitzhembach" width="900" height="237">
+      </span>
       <p class="kopf-oben">Mein Ausweis</p>
       <h1 id="titel-ausweis" class="kopf-name">–</h1>
     </header>
@@ -105,10 +106,20 @@
         es geht nicht um Noten, sondern um deine Entwicklung.</p>
 
       <form id="formular-einschaetzung">
+        <div class="fortschritt">
+          <p class="fortschritt-text">
+            <span>Deine Antworten</span>
+            <b id="fortschritt-zahl">0 von 0</b>
+          </p>
+          <div class="fortschritt-balken" role="progressbar" id="fortschritt-balken"
+               aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"
+               aria-label="Beantwortete Fragen"><i id="fortschritt-fuellung"></i></div>
+        </div>
+
         <div id="kriterien-liste"></div>
 
-        <fieldset class="beleg">
-          <legend>Zum Schluss</legend>
+        <div class="beleg" role="group" aria-labelledby="beleg-titel">
+          <p class="beleg-titel" id="beleg-titel">Zum Schluss</p>
           <label class="feld">
             <span>Woran hast du in den letzten zwei Wochen besonders gearbeitet?</span>
             <select id="beleg-kriterium"></select>
@@ -119,7 +130,7 @@
                       placeholder="Zum Beispiel: Ich habe jeden Morgen zuerst mein Fach aufgeräumt."></textarea>
             <span class="zaehler" id="beleg-zaehler">0 Zeichen</span>
           </label>
-        </fieldset>
+        </div>
 
         <p id="einschaetzung-fehler" class="fehler" role="alert" hidden></p>
         <button type="submit" class="knopf-gross" id="knopf-senden">

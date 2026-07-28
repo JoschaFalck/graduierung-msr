@@ -21,7 +21,9 @@
   main { width: min(30rem, 100%); text-align: center; }
   .ankersymbol { width: 84px; height: 84px; border-radius: 20px; }
   h1 { font-size: 1.5rem; margin: 1rem 0 0.75rem; }
-  .schullogo { width: 210px; max-width: 70%; height: auto; margin: 0 auto 2rem; display: block; }
+  .schullogo-feld { display: inline-block; padding: 0.5rem 0.7rem; margin-bottom: 2rem;
+                    background: #fff; border-radius: 10px; }
+  .schullogo-feld img { display: block; width: 210px; max-width: 100%; height: auto; }
   a {
     display: block; background: var(--flaeche); color: inherit; text-decoration: none;
     border: 1px solid var(--linie); border-left: 5px solid var(--blau); border-radius: 14px;
@@ -38,20 +40,19 @@
 <main>
   <img class="ankersymbol" src="symbole/symbol-512.png" alt="">
   <h1>Graduierung</h1>
-  <picture>
-    <source srcset="symbole/schullogo-weiss.png" media="(prefers-color-scheme: dark)">
-    <img class="schullogo" src="symbole/schullogo.png"
+  <span class="schullogo-feld">
+    <img src="symbole/schullogo.png"
          alt="Mittelschule Rednitzhembach" width="900" height="237">
-  </picture>
+  </span>
 
   <a href="schueler/">
     <strong>Für Schülerinnen und Schüler</strong>
     <span>Meinen Ausweis ansehen und mich selbst einschätzen</span>
   </a>
 
-  <a href="lehrkraft/" aria-disabled="true">
+  <a href="lehrkraft/">
     <strong>Für Lehrkräfte</strong>
-    <span>Wird gerade gebaut</span>
+    <span>Klassendatei öffnen, einsammeln, einschätzen</span>
   </a>
 
   <footer>Alle Daten bleiben auf dem jeweiligen Gerät.</footer>

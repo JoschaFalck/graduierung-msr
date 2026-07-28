@@ -81,15 +81,26 @@ h2 {
 .einrichtung-karte.mittig { text-align: center; }
 .einrichtung-karte h1 { margin-top: 0; }
 
-.karten-logo {
-  display: block;
-  width: 190px;
-  max-width: 60%;
-  height: auto;
+/* Im Hellmodus verschwindet das Feld in der weissen Karte, im Dunkelmodus
+   trägt es das farbige Logo. So bleibt das Logo überall dasselbe. */
+.karten-logo-feld {
+  display: inline-block;
+  padding: 0.5rem 0.7rem;
   margin-bottom: 1.25rem;
+  background: #fff;
+  border-radius: 10px;
 }
 
-.einrichtung-karte.mittig .karten-logo { margin-inline: auto; }
+.karten-logo-feld img {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .karten-logo-feld { box-shadow: 0 1px 4px rgb(0 0 0 / 30%); }
+}
 
 .haken {
   font-size: 3.5rem;
@@ -286,21 +297,28 @@ button {
   color: #fff;
 }
 
-/* Im Kopf nur die Bildmarke (Brücke): der Schriftzug wäre bei dieser Größe
-   unlesbar. Weisse Silhouette als eigene Datei statt CSS-Filter -- ein
-   brightness(0) auf dem farbigen Logo zieht die Kanten mit und wirkt schmutzig.
-   Die vollständige Wortbildmarke steht gross auf der Willkommensseite. */
-.kopf-logo {
+/* Das Logo bleibt farbig -- dafür bekommt es im farbigen Kopf ein helles Feld.
+   Die schwarze Brücke wäre direkt auf der Stufenfarbe sonst nicht erkennbar. */
+.kopf-logo-feld {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 1.35rem);
-  right: 1.25rem;
-  width: 74px;
+  top: calc(env(safe-area-inset-top) + 1.1rem);
+  right: 1.1rem;
+  display: block;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+}
+
+.kopf-logo-feld img {
+  display: block;
+  width: 150px;
   height: auto;
-  opacity: 0.95;
 }
 
 @media (max-width: 26rem) {
-  .kopf-logo { width: 58px; }
+  .kopf-logo-feld { padding: 0.35rem 0.45rem; }
+  .kopf-logo-feld img { width: 116px; }
 }
 
 .kopf-oben {
@@ -393,28 +411,111 @@ button {
 
 /* ---------- Kriterien der Selbsteinschätzung ---------- */
 
-.kriterium {
-  background: var(--flaeche);
-  border-radius: var(--radius);
-  box-shadow: var(--schatten);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border: 0;
+/* Fortschritt: zeigt, wie viel noch kommt -- bei 14 Kriterien auf Freier See
+   sonst eine gefühlt endlose Liste. */
+.fortschritt {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 0.7rem 0 0.85rem;
+  margin-bottom: 0.5rem;
+  background: var(--grund);
 }
 
-.kriterium legend { padding: 0; margin-bottom: 0.75rem; font-weight: 500; }
+.fortschritt-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-leise);
+}
+
+.fortschritt-text b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.fortschritt-balken {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--linie);
+  overflow: hidden;
+}
+
+.fortschritt-balken i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--stufe);
+  transition: width 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fortschritt-balken i { transition: none; }
+}
+
+.kriterium,
+.beleg {
+  background: var(--flaeche);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1.1rem;
+  margin: 0 0 0.7rem;
+}
+
+.kriterium-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0 0 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.kriterium-nummer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-leise);
+  background: var(--grund);
+  border-radius: 50%;
+}
+
+/* beantwortet: Nummer gefüllt statt Haken -- so bleibt die Nummerierung
+   durchgehend lesbar und man sieht trotzdem auf einen Blick, was fehlt */
+.kriterium.beantwortet .kriterium-nummer {
+  color: #fff;
+  background: var(--stufe);
+}
 
 .kriterium.offen { box-shadow: 0 0 0 2px var(--warnung); }
 
 .gruppentitel {
-  margin: 1.75rem 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.9rem 0 0.8rem;
   font-size: 0.85rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-leise);
+  color: var(--stufe);
+  font-weight: 600;
 }
 
-.gruppentitel:first-child { margin-top: 0.5rem; }
+.gruppentitel::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--linie);
+}
+
+.gruppentitel:first-child { margin-top: 0.25rem; }
 
 .skala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 
@@ -423,39 +524,46 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
-  padding: 0.7rem 0.35rem;
-  min-height: 62px;
+  gap: 0.25rem;
+  padding: 0.75rem 0.35rem;
+  min-height: 68px;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  color: var(--text-leise);
   background: var(--grund);
-  border: 2px solid var(--linie);
+  border: 2px solid transparent;
   border-radius: 10px;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skala label { transition: none; }
 }
 
 .skala input { position: absolute; opacity: 0; pointer-events: none; }
-.skala .zeichen { font-size: 1.15rem; font-weight: 700; }
+.skala .zeichen { font-size: 1.3rem; font-weight: 700; line-height: 1; }
 
 .skala label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
 
-.skala label:has(input[value="erreicht"]:checked)  { border-color: var(--gut);    color: var(--gut); }
-.skala label:has(input[value="teilweise"]:checked) { border-color: var(--mittel); color: var(--mittel); }
-.skala label:has(input[value="nicht"]:checked)     { border-color: var(--offen);  color: var(--offen); }
+/* ausgewählt: gefüllt statt nur umrandet -- auf dem iPad aus zwei Metern
+   Entfernung sonst kaum zu erkennen */
+.skala label:has(input:checked) { color: #fff; font-weight: 600; }
+.skala label:has(input[value="erreicht"]:checked)  { background: var(--gut); }
+.skala label:has(input[value="teilweise"]:checked) { background: var(--mittel); }
+.skala label:has(input[value="nicht"]:checked)     { background: var(--offen); }
 
 .beleg {
-  background: var(--flaeche);
-  border: 0;
-  border-radius: var(--radius);
-  box-shadow: var(--schatten);
-  padding: 1rem;
-  margin: 1.75rem 0 0;
+  margin: 1.9rem 0 0;
+  border-left: 5px solid var(--stufe);
 }
 
-.beleg legend {
+.beleg-titel {
+  margin: 0 0 0.2rem;
   font-size: 0.85rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-leise);
+  color: var(--stufe);
+  font-weight: 600;
 }
 
 /* ---------- Tipp „zum Home-Bildschirm“ ---------- */

@@ -163,4 +163,128 @@ test('Nichtobjekt wird abgefangen', () => {
   assert.equal(uebergabePruefen('text', katalog).ok, false);
 });
 
+
+// ---------------------------------------------------------------- Klassendatei
+const kd = await import(`${BASIS}/klassendatei.js`);
+const tresor = await import(`${BASIS}/tresor.js`);
+
+console.log('\nKlassendatei');
+const datei = kd.klasseAnlegen({
+  klasse: ' 8a ', schuljahr: '2026/27',
+  zyklusStart: '2026-09-14', katalogVersion: katalog.version,
+});
+
+test('wird angelegt und getrimmt', () => {
+  assert.equal(datei.klasse, '8a');
+  assert.equal(datei.zyklus.tageJeZeitraum, 14);
+  assert.deepEqual([datei.lernende, datei.einschaetzungen, datei.coachings], [[], [], []]);
+});
+test('prüft Typ und Version', () => {
+  assert.throws(() => kd.pruefen({ typ: 'anderes' }), /keine Klassendatei/);
+  assert.throws(() => kd.pruefen({ typ: 'graduierung.klasse', formatVersion: 99 }), /neueren Fassung/);
+  assert.ok(kd.pruefen({ typ: 'graduierung.klasse', formatVersion: 1 }));
+});
+
+const lea = kd.lernendeAnlegen(datei, ' Lea Müßig ', 'ankerplatz');
+kd.lernendeAnlegen(datei, 'Ali Demir', 'hafen');
+test('Lernende werden alphabetisch geführt', () => {
+  assert.deepEqual(datei.lernende.map(l => l.name), ['Ali Demir', 'Lea Müßig']);
+});
+test('Namenssuche ist tolerant', () => {
+  assert.equal(kd.lernendeSuchen(datei, 'lea   müßig').id, lea.id);
+  assert.equal(kd.lernendeSuchen(datei, 'Unbekannt'), null);
+});
+
+console.log('\nZeiträume');
+test('Zeitraum wächst alle 14 Tage', () => {
+  assert.equal(kd.zeitraumFuer(datei, '2026-09-14'), 1);
+  assert.equal(kd.zeitraumFuer(datei, '2026-09-27'), 1);
+  assert.equal(kd.zeitraumFuer(datei, '2026-09-28'), 2);
+  assert.equal(kd.zeitraumFuer(datei, '2026-11-09'), 5);
+});
+test('vor dem Start bleibt es Zeitraum 1', () => {
+  assert.equal(kd.zeitraumFuer(datei, '2026-08-01'), 1);
+});
+test('Coaching-Block umfasst vier Zeiträume', () => {
+  assert.deepEqual(kd.zeitraeumeDesBlocks(datei, 3), [1, 2, 3, 4]);
+  assert.deepEqual(kd.zeitraeumeDesBlocks(datei, 5), [5, 6, 7, 8]);
+});
+test('Coaching ist nach jedem vierten Zeitraum fällig', () => {
+  assert.deepEqual([1,2,3,4,5,8].map(z => kd.coachingFaellig(datei, z)),
+    [false, false, false, true, false, true]);
+});
+
+console.log('\nImport der Selbsteinschätzungen');
+const machUebergabe = (name, stufe, wann) => ({
+  ...uebergabeErzeugen({
+    schueler: { name, klasse: '8a' }, stufe,
+    bewertungen: Object.fromEntries(kriterienDerStufe(katalog, stufe).map(k => [k.id, 'erreicht'])),
+    beleg: { kriteriumId: 'H1', text: 'Ich war jeden Tag puenktlich.' },
+    katalogVersion: katalog.version,
+  }),
+  erstellt: wann,
+});
+
+test('bekanntes Kind wird übernommen', () => {
+  const r = kd.selbsteinschaetzungUebernehmen(datei, machUebergabe('Lea Müßig', 'ankerplatz', '2026-09-20T09:00:00Z'));
+  assert.equal(r.art, 'neu');
+  assert.equal(r.zeitraum, 1);
+  assert.equal(r.stufeWeicht, false);
+  assert.ok(kd.einschaetzung(datei, lea.id, 1, 'selbst'));
+});
+test('zweite Abgabe ersetzt die erste', () => {
+  const r = kd.selbsteinschaetzungUebernehmen(datei, machUebergabe('lea müssig'.replace('ss','ß'), 'ankerplatz', '2026-09-21T09:00:00Z'));
+  assert.equal(r.art, 'ersetzt');
+  assert.equal(datei.einschaetzungen.filter(e => e.schuelerId === lea.id && e.quelle === 'selbst').length, 1);
+});
+test('abweichende Stufe wird gemeldet', () => {
+  const r = kd.selbsteinschaetzungUebernehmen(datei, machUebergabe('Lea Müßig', 'boie', '2026-09-22T09:00:00Z'));
+  assert.equal(r.stufeWeicht, true);
+  assert.equal(r.gemeldeteStufe, 'boie');
+  assert.equal(r.gefuehrteStufe, 'ankerplatz');
+});
+test('unbekannter Name wird gemeldet statt angelegt', () => {
+  const r = kd.selbsteinschaetzungUebernehmen(datei, machUebergabe('Fremdes Kind', 'hafen', '2026-09-20T09:00:00Z'));
+  assert.equal(r.art, 'unbekannt');
+  assert.equal(datei.lernende.length, 2);
+});
+test('Fehlliste nennt die Nachzügler', () => {
+  const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, 1).map(l => l.name);
+  assert.deepEqual(fehlen, ['Ali Demir']);
+});
+test('Fremdeinschätzung liegt neben der Selbsteinschätzung', () => {
+  kd.einschaetzungSetzen(datei, { schuelerId: lea.id, zeitraum: 1, quelle: 'fremd',
+    bewertungen: { H1: 'teilweise' } });
+  assert.equal(kd.einschaetzung(datei, lea.id, 1, 'fremd').bewertungen.H1, 'teilweise');
+  assert.equal(kd.einschaetzung(datei, lea.id, 1, 'selbst').bewertungen.H1, 'erreicht');
+});
+test('Stufenwechsel wird vermerkt', () => {
+  const k = kd.stufeSetzen(datei, lea.id, 'boie');
+  assert.equal(k.stufe, 'boie');
+  assert.match(k.seit, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+console.log('\nVerschlüsselung');
+const bytes = await tresor.verschluesseln(datei, 'Seepferdchen-42!');
+geprueft++; console.log('  ok  Runde durch Ver- und Entschlüsseln');
+test('Geheimtext trägt die Kennung und ist kein Klartext', () => {
+  assert.equal(new TextDecoder().decode(bytes.slice(0, 6)), 'GRADU1');
+  assert.ok(!new TextDecoder().decode(bytes).includes('Lea'), 'Name im Klartext gefunden!');
+});
+const zurueck = await tresor.entschluesseln(bytes, 'Seepferdchen-42!');
+test('entschlüsselt identisch', () => {
+  assert.deepEqual(zurueck, JSON.parse(JSON.stringify(datei)));
+});
+await assert.rejects(() => tresor.entschluesseln(bytes, 'falsch'), /Passwort falsch/);
+geprueft++; console.log('  ok  falsches Passwort scheitert sauber');
+await assert.rejects(() => tresor.entschluesseln(new Uint8Array(80), 'x'), /keine Klassendatei/);
+geprueft++; console.log('  ok  fremde Datei wird abgelehnt');
+const zweite = await tresor.verschluesseln(datei, 'Seepferdchen-42!');
+assert.notDeepEqual([...bytes.slice(6, 40)], [...zweite.slice(6, 40)]);
+geprueft++; console.log('  ok  Salz und IV sind je Speichervorgang neu');
+test('Passphrase-Güte', () => {
+  assert.equal(tresor.passphraseGuete('kurz').stufe, 'schwach');
+  assert.equal(tresor.passphraseGuete('Seepferdchen-42!').stufe, 'gut');
+});
+
 console.log(`\n${geprueft} Prüfungen bestanden.\n`);

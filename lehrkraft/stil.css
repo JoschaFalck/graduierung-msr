@@ -1,0 +1,222 @@
+/* Lehrkraft-Anwendung. Zielgerät: MacBook, Maus und Tastatur. */
+
+:root {
+  --stufe: #16506B;
+  --grund: #f4f6f8;
+  --flaeche: #ffffff;
+  --linie: #d8dee4;
+  --text: #1b2733;
+  --text-leise: #5a6b7b;
+  --gut: #2f7d4f;
+  --mittel: #b8791c;
+  --offen: #8a5a5a;
+  --warnung: #a5342f;
+  --radius: 12px;
+  --schatten: 0 1px 3px rgb(20 40 60 / 12%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund: #12181e; --flaeche: #1c242c; --linie: #33404c;
+    --text: #e8eef4; --text-leise: #9fb0c0;
+    --gut: #6cc08c; --mittel: #e0a94e; --offen: #c99a9a; --warnung: #ef8078;
+    --schatten: 0 1px 3px rgb(0 0 0 / 40%);
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+h1 { font-size: 1.35rem; line-height: 1.25; }
+h2 {
+  font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-leise); margin: 1.75rem 0 0.6rem;
+}
+
+.lang { color: var(--text-leise); max-width: 44rem; }
+.hinweis { font-size: 0.9rem; color: var(--text-leise); }
+.fehler { color: var(--warnung); font-weight: 600; }
+.ladefehler { padding: 2rem; }
+.leer { color: var(--text-leise); padding: 1.5rem 0; }
+
+/* ---------- Einstieg ---------- */
+
+.einstieg {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid; place-items: center; padding: 1.5rem;
+  background: var(--grund); overflow-y: auto;
+}
+
+.einstieg-karte {
+  width: min(28rem, 100%);
+  background: var(--flaeche);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1.75rem;
+}
+
+.karten-logo-feld {
+  display: inline-block; padding: 0.5rem 0.7rem; margin-bottom: 1.25rem;
+  background: #fff; border-radius: 10px;
+}
+.karten-logo-feld img { display: block; width: 190px; max-width: 100%; height: auto; }
+
+.dateiname {
+  padding: 0.6rem 0.8rem; margin: 0 0 1rem;
+  background: var(--grund); border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem;
+}
+
+/* ---------- Formular ---------- */
+
+.feld { display: block; margin: 1rem 0; }
+.feld > span { display: block; font-weight: 600; margin-bottom: 0.35rem; }
+
+input[type="text"], input[type="password"], input[type="date"] {
+  width: 100%; padding: 0.6rem 0.7rem; font: inherit;
+  color: var(--text); background: var(--grund);
+  border: 2px solid var(--linie); border-radius: 8px;
+}
+input:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
+
+.zaehler { display: block; margin-top: 0.3rem; font-size: 0.85rem; color: var(--text-leise); }
+.zaehler[data-stufe="schwach"] { color: var(--warnung); }
+.zaehler[data-stufe="mittel"] { color: var(--mittel); }
+.zaehler[data-stufe="gut"] { color: var(--gut); }
+
+button { font: inherit; cursor: pointer; border-radius: 8px; }
+
+.knopf-gross {
+  display: block; width: 100%; padding: 0.8rem; margin-top: 1rem;
+  font-weight: 600; color: #fff; background: var(--stufe); border: 0; min-height: 46px;
+}
+.knopf-leise {
+  display: block; width: 100%; padding: 0.7rem; margin-top: 0.6rem;
+  color: var(--text-leise); background: transparent;
+  border: 2px solid var(--linie); min-height: 42px;
+}
+.knopf-klein {
+  padding: 0.45rem 0.8rem; color: var(--text);
+  background: var(--flaeche); border: 1px solid var(--linie);
+}
+
+/* ---------- Kopf und Leiste ---------- */
+
+.kopf {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 1.5rem; background: var(--stufe); color: #fff;
+}
+.kopf-oben { margin: 0 0 0.15rem; font-size: 0.8rem; letter-spacing: 0.06em;
+             text-transform: uppercase; opacity: 0.85; }
+.kopf-name { margin: 0; }
+.kopf-logo-feld {
+  flex: none; display: block; padding: 0.4rem 0.55rem;
+  background: #fff; border-radius: 9px; box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+}
+.kopf-logo-feld img { display: block; width: 132px; height: auto; }
+
+.leiste {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.5rem 1.5rem; background: var(--flaeche);
+  border-bottom: 1px solid var(--linie); font-size: 0.9rem;
+}
+.marke {
+  font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #fff; background: var(--stufe); border-radius: 6px; padding: 0.15rem 0.5rem;
+}
+.leiste-status { color: var(--text-leise); }
+.leiste-fuell { flex: 1; }
+.gesichert { font-size: 0.85rem; color: var(--text-leise); }
+.gesichert[data-zustand="offen"] { color: var(--mittel); }
+
+.inhalt { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1.5rem 6rem; }
+.werkzeuge { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+
+/* ---------- Klassenliste ---------- */
+
+.kind {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 1rem;
+  padding: 0.7rem 0.9rem; margin-bottom: 0.45rem;
+  background: var(--flaeche); border-left: 5px solid var(--farbe);
+  border-radius: 10px; box-shadow: var(--schatten);
+}
+.kind-name { font-weight: 600; }
+.kind-stufe { font-size: 0.88rem; color: var(--farbe); font-weight: 600; }
+.kind-punkte { display: flex; gap: 0.25rem; }
+
+.punkt { width: 12px; height: 12px; border-radius: 50%; background: var(--linie); }
+.punkt.halb { background: var(--mittel); }
+.punkt.beide { background: var(--gut); }
+
+/* ---------- Import ---------- */
+
+.ablage {
+  padding: 1.5rem; text-align: center;
+  background: var(--flaeche); border: 2px dashed var(--linie); border-radius: var(--radius);
+}
+.ablage.bereit { border-color: var(--stufe); background: var(--grund); }
+.ablage p { margin: 0 0 0.5rem; }
+.ablage .lang { margin: 0 auto 1rem; }
+
+.meldungen { display: grid; gap: 0.35rem; }
+.meldung {
+  margin: 0; padding: 0.55rem 0.8rem; border-radius: 8px;
+  background: var(--flaeche); border-left: 4px solid var(--linie); box-shadow: var(--schatten);
+}
+.meldung.gut { border-left-color: var(--gut); }
+.meldung.warnung { border-left-color: var(--mittel); }
+.meldung.fehler { border-left-color: var(--warnung); }
+.meldung.offen { border-left-color: var(--linie); color: var(--text-leise); }
+
+/* ---------- Fremdeinschätzung ---------- */
+
+.zeilenwahl { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0 1.25rem; }
+.zeile {
+  padding: 0.45rem 0.75rem; text-align: left; font-size: 0.9rem;
+  color: var(--text-leise); background: var(--flaeche);
+  border: 1px solid var(--linie); border-radius: 20px;
+}
+.zeile.aktiv { color: #fff; background: var(--stufe); border-color: var(--stufe); font-weight: 600; }
+
+.rasterzeile {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem;
+  padding: 0.5rem 0.9rem; margin-bottom: 0.35rem;
+  background: var(--flaeche); border-radius: 10px; box-shadow: var(--schatten);
+}
+.rasterzeile-name { font-weight: 500; }
+.rasterskala { display: flex; gap: 0.3rem; }
+
+.rasterskala label {
+  display: flex; align-items: center; justify-content: center;
+  width: 3rem; height: 2.4rem; font-weight: 700;
+  color: var(--text-leise); background: var(--grund);
+  border: 2px solid transparent; border-radius: 8px; cursor: pointer;
+}
+.rasterskala input { position: absolute; opacity: 0; pointer-events: none; }
+.rasterskala .nur-lesen {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+}
+.rasterskala label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
+.rasterskala label.gewaehlt { color: #fff; }
+.rasterskala label.gewaehlt[data-wert="erreicht"]  { background: var(--gut); }
+.rasterskala label.gewaehlt[data-wert="teilweise"] { background: var(--mittel); }
+.rasterskala label.gewaehlt[data-wert="nicht"]     { background: var(--offen); }
+
+/* ---------- Navigation ---------- */
+
+.navigation {
+  position: fixed; inset: auto 0 0; display: flex; justify-content: center; gap: 0.5rem;
+  padding: 0.5rem; background: var(--flaeche); border-top: 1px solid var(--linie);
+}
+.navigation button {
+  padding: 0.5rem 1.1rem; color: var(--text-leise);
+  background: transparent; border: 0; min-height: 40px;
+}
+.navigation button.aktiv { color: var(--stufe); font-weight: 600; background: var(--grund); }

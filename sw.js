@@ -7,7 +7,7 @@
 // (Cache zuerst wäre schneller, würde aber alte Fassungen auf den iPads festhalten --
 // bei 25 Geräten, die man nicht einzeln entstauben kann, ein schlechter Tausch.)
 
-const FASSUNG = 'graduierung-v3';
+const FASSUNG = 'graduierung-v5';
 
 const VORRAT = [
   './',
@@ -20,12 +20,16 @@ const VORRAT = [
   './gemeinsam/katalog.json',
   './gemeinsam/katalog.js',
   './gemeinsam/uebergabe.js',
+  './gemeinsam/tresor.js',
+  './gemeinsam/klassendatei.js',
+  './lehrkraft/',
+  './lehrkraft/index.html',
+  './lehrkraft/lehrkraft.js',
+  './lehrkraft/stil.css',
   './symbole/symbol-192.png',
   './symbole/symbol-512.png',
   './symbole/apple-touch-icon.png',
   './symbole/schullogo.png',
-  './symbole/schullogo-weiss.png',
-  './symbole/schullogo-marke-weiss.png',
   './symbole/stufen/hafen.png',
   './symbole/stufen/ankerplatz.png',
   './symbole/stufen/boie.png',

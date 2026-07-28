@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#16506B">
+<meta name="robots" content="noindex, nofollow">
+<title>Graduierung – Lehrkraft</title>
+<link rel="icon" href="../symbole/symbol-192.png" type="image/png">
+<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+
+<!-- Einstieg: Datei öffnen oder anlegen ------------------------------------->
+<div class="einstieg" id="einstieg">
+  <div class="einstieg-karte">
+    <span class="karten-logo-feld">
+      <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
+    </span>
+    <h1>Graduierung</h1>
+    <p class="lang">Deine Klassendaten liegen in einer verschlüsselten Datei auf diesem Gerät.
+      Sie werden nirgendwohin übertragen.</p>
+
+    <div id="einstieg-start">
+      <button type="button" class="knopf-gross" id="datei-oeffnen">Klassendatei öffnen</button>
+      <button type="button" class="knopf-leise" id="datei-neu">Neue Klasse anlegen</button>
+    </div>
+
+    <!-- Neue Klasse -->
+    <form id="formular-neu" hidden>
+      <label class="feld"><span>Klasse</span>
+        <input type="text" id="neu-klasse" placeholder="8a"></label>
+      <label class="feld"><span>Schuljahr</span>
+        <input type="text" id="neu-schuljahr" placeholder="2026/27"></label>
+      <label class="feld"><span>Erster Tag des ersten Zeitraums</span>
+        <input type="date" id="neu-start"></label>
+      <label class="feld"><span>Passwort für die Datei</span>
+        <input type="password" id="neu-passwort" autocomplete="new-password">
+        <span class="zaehler" id="neu-guete"></span></label>
+      <p class="hinweis">Ohne dieses Passwort kommst du nicht mehr an die Daten –
+        es gibt keine Wiederherstellung. Schreib es dir auf.</p>
+      <p class="fehler" id="neu-fehler" role="alert" hidden></p>
+      <button type="submit" class="knopf-gross">Anlegen und speichern</button>
+      <button type="button" class="knopf-leise" data-zurueck>Zurück</button>
+    </form>
+
+    <!-- Passwort für vorhandene Datei -->
+    <form id="formular-oeffnen" hidden>
+      <p class="dateiname" id="oeffnen-name">–</p>
+      <label class="feld"><span>Passwort</span>
+        <input type="password" id="oeffnen-passwort" autocomplete="current-password"></label>
+      <p class="fehler" id="oeffnen-fehler" role="alert" hidden></p>
+      <button type="submit" class="knopf-gross">Öffnen</button>
+      <button type="button" class="knopf-leise" data-zurueck>Zurück</button>
+    </form>
+  </div>
+</div>
+
+<!-- Anwendung --------------------------------------------------------------->
+<div id="anwendung" hidden>
+  <header class="kopf">
+    <div class="kopf-links">
+      <p class="kopf-oben">Klasse <span id="kopf-klasse">–</span> · <span id="kopf-schuljahr">–</span></p>
+      <h1 class="kopf-name" id="kopf-titel">Übersicht</h1>
+    </div>
+    <span class="kopf-logo-feld">
+      <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
+    </span>
+  </header>
+
+  <div class="leiste">
+    <span class="marke" id="leiste-zeitraum">Zeitraum –</span>
+    <span id="leiste-status" class="leiste-status">–</span>
+    <span class="leiste-fuell"></span>
+    <span class="gesichert" id="gesichert">gesichert</span>
+  </div>
+
+  <main class="inhalt">
+    <!-- Übersicht -->
+    <section class="ansicht" id="ansicht-uebersicht">
+      <div class="werkzeuge">
+        <button type="button" class="knopf-klein" id="kind-anlegen">+ Kind hinzufügen</button>
+      </div>
+      <div id="klassenliste"></div>
+    </section>
+
+    <!-- Einsammeln -->
+    <section class="ansicht" id="ansicht-import" hidden>
+      <div class="ablage" id="ablage">
+        <p><strong>Selbsteinschätzungen einlesen</strong></p>
+        <p class="lang">Zieh die per AirDrop empfangenen Dateien hierher –
+          oder wähle sie aus. Mehrere auf einmal sind kein Problem.</p>
+        <button type="button" class="knopf-klein" id="dateien-waehlen">Dateien auswählen</button>
+        <input type="file" id="datei-eingabe" accept="application/json,.json" multiple hidden>
+      </div>
+      <div id="import-ergebnis"></div>
+      <div id="import-fehlliste"></div>
+    </section>
+
+    <!-- Fremdeinschätzung -->
+    <section class="ansicht" id="ansicht-fremd" hidden>
+      <p class="lang">Ein Kriterium für die ganze Klasse – so bleibt der Maßstab gleich.
+        Geerbte Stufen stehen als Sammelzeile.</p>
+      <div class="zeilenwahl" id="zeilenwahl"></div>
+      <div id="fremd-raster"></div>
+    </section>
+  </main>
+
+  <nav class="navigation" aria-label="Bereiche">
+    <button type="button" data-ansicht="uebersicht" class="aktiv">Übersicht</button>
+    <button type="button" data-ansicht="import">Einsammeln</button>
+    <button type="button" data-ansicht="fremd">Fremdeinschätzung</button>
+  </nav>
+</div>
+
+<p id="ladefehler" class="fehler ladefehler" hidden></p>
+
+<script type="module" src="lehrkraft.js"></script>
+</body>
+</html>
