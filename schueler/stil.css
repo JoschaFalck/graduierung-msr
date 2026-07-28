@@ -81,6 +81,16 @@ h2 {
 .einrichtung-karte.mittig { text-align: center; }
 .einrichtung-karte h1 { margin-top: 0; }
 
+.karten-logo {
+  display: block;
+  width: 190px;
+  max-width: 60%;
+  height: auto;
+  margin-bottom: 1.25rem;
+}
+
+.einrichtung-karte.mittig .karten-logo { margin-inline: auto; }
+
 .haken {
   font-size: 3.5rem;
   color: var(--gut);
@@ -276,14 +286,21 @@ button {
   color: #fff;
 }
 
+/* Im Kopf nur die Bildmarke (Brücke): der Schriftzug wäre bei dieser Größe
+   unlesbar. Weisse Silhouette als eigene Datei statt CSS-Filter -- ein
+   brightness(0) auf dem farbigen Logo zieht die Kanten mit und wirkt schmutzig.
+   Die vollständige Wortbildmarke steht gross auf der Willkommensseite. */
 .kopf-logo {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 1.25rem);
+  top: calc(env(safe-area-inset-top) + 1.35rem);
   right: 1.25rem;
-  width: 118px;
+  width: 74px;
   height: auto;
-  opacity: 0.9;
-  filter: brightness(0) invert(1);
+  opacity: 0.95;
+}
+
+@media (max-width: 26rem) {
+  .kopf-logo { width: 58px; }
 }
 
 .kopf-oben {
