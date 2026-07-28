@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lernstufe">
+<meta name="theme-color" content="#16506B">
+<title>Meine Lernstufe</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../symbole/apple-touch-icon.png">
+<link rel="icon" href="../symbole/symbol-192.png" type="image/png">
+<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+
+<!-- Ersteinrichtung: nur beim allerersten Start ------------------------------>
+<div id="einrichtung" class="einrichtung" hidden>
+  <div class="einrichtung-karte">
+    <h1>Willkommen!</h1>
+    <p class="lang">Hier schätzt du dich selbst ein – alle zwei Wochen.
+      Sag mir zuerst, wer du bist.</p>
+
+    <label class="feld">
+      <span>Dein Name</span>
+      <input type="text" id="eingabe-name" autocomplete="name" enterkeyhint="next"
+             placeholder="Vorname Nachname">
+    </label>
+
+    <label class="feld">
+      <span>Deine Klasse</span>
+      <input type="text" id="eingabe-klasse" enterkeyhint="done" placeholder="z. B. 8a">
+    </label>
+
+    <fieldset class="feld">
+      <legend>Auf welcher Stufe bist du gerade?</legend>
+      <p class="hinweis">Schau auf deinen Ausweis. Du kannst das später ändern.</p>
+      <div id="stufenwahl" class="stufenwahl"></div>
+    </fieldset>
+
+    <p id="einrichtung-fehler" class="fehler" role="alert" hidden></p>
+    <button type="button" id="einrichtung-fertig" class="knopf-gross">Los geht's</button>
+  </div>
+</div>
+
+<!-- Hauptanwendung ---------------------------------------------------------->
+<div id="anwendung" hidden>
+
+  <!-- Ansicht: Mein Ausweis -->
+  <section class="ansicht" id="ansicht-ausweis" aria-labelledby="titel-ausweis">
+    <header class="kopf">
+      <p class="kopf-oben">Mein Ausweis</p>
+      <h1 id="titel-ausweis" class="kopf-name">–</h1>
+    </header>
+
+    <div class="inhalt">
+      <div class="ausweis" id="ausweis">
+        <p class="ausweis-oben">Ich lerne</p>
+        <p class="ausweis-stufe" id="ausweis-stufe">–</p>
+        <p class="ausweis-motto" id="ausweis-motto"></p>
+      </div>
+
+      <h2>Das darf ich</h2>
+      <ul class="liste liste-privilegien" id="liste-privilegien"></ul>
+
+      <h2>Dafür übernehme ich Verantwortung</h2>
+      <ul class="liste liste-verantwortung" id="liste-verantwortung"></ul>
+
+      <div class="fussbereich">
+        <button type="button" id="stufe-aendern" class="knopf-leise">Meine Stufe ändern</button>
+        <button type="button" id="profil-zuruecksetzen" class="knopf-leise gefahr">
+          Alles auf diesem Gerät löschen
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ansicht: Selbsteinschätzung -->
+  <section class="ansicht" id="ansicht-einschaetzung" aria-labelledby="titel-einschaetzung" hidden>
+    <header class="kopf">
+      <p class="kopf-oben">Alle zwei Wochen</p>
+      <h1 id="titel-einschaetzung" class="kopf-name">Selbsteinschätzung</h1>
+    </header>
+
+    <div class="inhalt">
+      <p class="lang">Wie gut gelingt dir das gerade? Sei ehrlich zu dir –
+        es geht nicht um Noten, sondern um deine Entwicklung.</p>
+
+      <form id="formular-einschaetzung">
+        <div id="kriterien-liste"></div>
+
+        <fieldset class="beleg">
+          <legend>Zum Schluss</legend>
+          <label class="feld">
+            <span>Woran hast du in den letzten zwei Wochen besonders gearbeitet?</span>
+            <select id="beleg-kriterium"></select>
+          </label>
+          <label class="feld">
+            <span>Woran merkt man das? Schreib einen Satz.</span>
+            <textarea id="beleg-text" rows="3" maxlength="300"
+                      placeholder="Zum Beispiel: Ich habe jeden Morgen zuerst mein Fach aufgeräumt."></textarea>
+            <span class="zaehler" id="beleg-zaehler">0 Zeichen</span>
+          </label>
+        </fieldset>
+
+        <p id="einschaetzung-fehler" class="fehler" role="alert" hidden></p>
+        <button type="submit" class="knopf-gross" id="knopf-senden">
+          An meine Lehrkraft senden
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Ansicht: Meine Einschätzungen -->
+  <section class="ansicht" id="ansicht-verlauf" aria-labelledby="titel-verlauf" hidden>
+    <header class="kopf">
+      <p class="kopf-oben">Nur für dich</p>
+      <h1 id="titel-verlauf" class="kopf-name">Meine Einschätzungen</h1>
+    </header>
+
+    <div class="inhalt">
+      <p class="lang" id="verlauf-hinweis">
+        Hier siehst du, was du selbst über dich aufgeschrieben hast.
+        Das bleibt auf deinem iPad.
+      </p>
+      <div id="verlauf-liste"></div>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <nav class="navigation" aria-label="Bereiche">
+    <button type="button" data-ansicht="ausweis" class="aktiv">
+      <span class="nav-symbol" aria-hidden="true">⚓</span>Mein Ausweis
+    </button>
+    <button type="button" data-ansicht="einschaetzung">
+      <span class="nav-symbol" aria-hidden="true">✎</span>Einschätzung
+    </button>
+    <button type="button" data-ansicht="verlauf">
+      <span class="nav-symbol" aria-hidden="true">≡</span>Verlauf
+    </button>
+  </nav>
+</div>
+
+<!-- Bestätigung nach dem Senden --------------------------------------------->
+<div id="gesendet" class="einrichtung" hidden>
+  <div class="einrichtung-karte mittig">
+    <p class="haken" aria-hidden="true">✓</p>
+    <h1>Geschickt!</h1>
+    <p class="lang" id="gesendet-text">Deine Selbsteinschätzung ist unterwegs.</p>
+
+    <div class="tipp" id="tipp-merken" hidden>
+      <p class="tipp-titel">Tipp: Leg dir das aufs iPad</p>
+      <p>Dann musst du deinen Namen nie wieder eingeben – und findest die Seite
+        beim nächsten Mal sofort wieder.</p>
+      <ol>
+        <li>Auf <strong>Teilen</strong> tippen – das Kästchen mit dem Pfeil nach oben</li>
+        <li><strong>Zum Home-Bildschirm</strong> wählen</li>
+        <li>Mit <strong>Hinzufügen</strong> bestätigen</li>
+      </ol>
+    </div>
+
+    <button type="button" id="gesendet-weiter" class="knopf-gross">Weiter</button>
+  </div>
+</div>
+
+<p id="ladefehler" class="fehler ladefehler" hidden></p>
+
+<script type="module" src="schueler.js"></script>
+</body>
+</html>

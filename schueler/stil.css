@@ -1,0 +1,453 @@
+/* Selbsteinschätzung – Schüleranwendung
+   Zielgerät: iPad. Große Tap-Ziele, klare Sprache, hoher Kontrast. */
+
+:root {
+  --stufe: #16506B;
+  --grund: #f4f6f8;
+  --flaeche: #ffffff;
+  --linie: #d8dee4;
+  --text: #1b2733;
+  --text-leise: #5a6b7b;
+  --gut: #2f7d4f;
+  --mittel: #b8791c;
+  --offen: #8a5a5a;
+  --warnung: #a5342f;
+  --radius: 14px;
+  --schatten: 0 1px 3px rgb(20 40 60 / 12%), 0 6px 20px rgb(20 40 60 / 6%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund: #12181e;
+    --flaeche: #1c242c;
+    --linie: #33404c;
+    --text: #e8eef4;
+    --text-leise: #9fb0c0;
+    --gut: #6cc08c;
+    --mittel: #e0a94e;
+    --offen: #c99a9a;
+    --warnung: #ef8078;
+    --schatten: 0 1px 3px rgb(0 0 0 / 40%);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--text);
+  font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2 { line-height: 1.25; }
+h2 {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  margin: 2rem 0 0.75rem;
+}
+
+/* ---------- Ersteinrichtung / Vollbild-Dialoge ---------- */
+
+.einrichtung {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--grund);
+  overflow-y: auto;
+}
+
+.einrichtung-karte {
+  width: min(34rem, 100%);
+  background: var(--flaeche);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1.75rem;
+}
+
+.einrichtung-karte.mittig { text-align: center; }
+.einrichtung-karte h1 { margin-top: 0; }
+
+.haken {
+  font-size: 3.5rem;
+  color: var(--gut);
+  margin: 0.5rem 0 0;
+}
+
+/* ---------- Formularelemente ---------- */
+
+.feld {
+  display: block;
+  margin: 1.25rem 0;
+  border: 0;
+  padding: 0;
+}
+
+.feld > span,
+.feld > legend,
+fieldset > legend {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+input[type="text"],
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--grund);
+  border: 2px solid var(--linie);
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-leise) 50%),
+                    linear-gradient(135deg, var(--text-leise) 50%, transparent 50%);
+  background-position: right 1.1rem center, right 0.85rem center;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--stufe);
+  outline-offset: 1px;
+}
+
+textarea { resize: vertical; }
+
+.zaehler {
+  display: block;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--text-leise);
+  margin-top: 0.25rem;
+}
+
+.hinweis {
+  font-size: 0.92rem;
+  color: var(--text-leise);
+  margin: 0 0 0.75rem;
+}
+
+.lang { color: var(--text-leise); max-width: 40rem; }
+
+.fehler {
+  color: var(--warnung);
+  font-weight: 600;
+  margin: 1rem 0;
+}
+
+.ladefehler { padding: 2rem; }
+
+/* ---------- Knöpfe ---------- */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.knopf-gross {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--stufe);
+  border: 0;
+  min-height: 56px;
+}
+
+.knopf-gross:disabled { opacity: 0.5; cursor: default; }
+
+.knopf-leise {
+  display: block;
+  width: 100%;
+  padding: 0.8rem;
+  margin-top: 0.75rem;
+  color: var(--text-leise);
+  background: transparent;
+  border: 2px solid var(--linie);
+  min-height: 48px;
+}
+
+.knopf-leise.gefahr { color: var(--warnung); border-color: transparent; }
+
+/* ---------- Stufenwahl ---------- */
+
+.stufenwahl { display: grid; gap: 0.6rem; }
+
+.stufenwahl label {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  background: var(--grund);
+  border: 2px solid var(--linie);
+  border-radius: 10px;
+  min-height: 56px;
+}
+
+.stufenwahl input { position: absolute; opacity: 0; pointer-events: none; }
+.stufenwahl label:has(input:checked) { border-color: var(--stufe); background: var(--flaeche); }
+.stufenwahl label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+.stufen-punkt {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  flex: none;
+}
+
+.stufen-name { font-weight: 600; }
+.stufen-motto { display: block; font-size: 0.88rem; color: var(--text-leise); font-weight: 400; }
+
+/* ---------- Kopf und Ansichten ---------- */
+
+.ansicht[hidden] { display: none; }
+
+.kopf {
+  padding: calc(env(safe-area-inset-top) + 1.5rem) 1.25rem 1.5rem;
+  background: var(--stufe);
+  color: #fff;
+}
+
+.kopf-oben {
+  margin: 0 0 0.2rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.kopf-name { margin: 0; font-size: 1.5rem; }
+
+.inhalt {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem calc(env(safe-area-inset-bottom) + 6.5rem);
+}
+
+/* ---------- Ausweis ---------- */
+
+.ausweis {
+  background: var(--flaeche);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  border-left: 6px solid var(--stufe);
+  padding: 1.5rem;
+  margin-top: -0.5rem;
+}
+
+.ausweis-oben { margin: 0; color: var(--text-leise); }
+.ausweis-stufe { margin: 0.15rem 0 0.5rem; font-size: 2rem; font-weight: 700; color: var(--stufe); }
+.ausweis-motto { margin: 0; color: var(--text-leise); font-style: italic; }
+
+.liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+
+.liste li {
+  background: var(--flaeche);
+  border-radius: 10px;
+  padding: 0.85rem 1rem 0.85rem 2.6rem;
+  position: relative;
+  box-shadow: var(--schatten);
+}
+
+.liste li::before {
+  position: absolute;
+  left: 1rem;
+  font-weight: 700;
+}
+
+.liste-privilegien li::before { content: "✦"; color: var(--stufe); }
+.liste-verantwortung li::before { content: "•"; color: var(--text-leise); }
+
+.liste-verantwortung .gruppe {
+  background: none;
+  box-shadow: none;
+  padding: 0.75rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+.liste-verantwortung .gruppe::before { content: none; }
+
+.fussbereich { margin-top: 2.5rem; }
+
+/* ---------- Kriterien der Selbsteinschätzung ---------- */
+
+.kriterium {
+  background: var(--flaeche);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border: 0;
+}
+
+.kriterium legend { padding: 0; margin-bottom: 0.75rem; font-weight: 500; }
+
+.kriterium.offen { box-shadow: 0 0 0 2px var(--warnung); }
+
+.gruppentitel {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+.gruppentitel:first-child { margin-top: 0.5rem; }
+
+.skala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+.skala label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.35rem;
+  min-height: 62px;
+  text-align: center;
+  font-size: 0.9rem;
+  background: var(--grund);
+  border: 2px solid var(--linie);
+  border-radius: 10px;
+}
+
+.skala input { position: absolute; opacity: 0; pointer-events: none; }
+.skala .zeichen { font-size: 1.15rem; font-weight: 700; }
+
+.skala label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+.skala label:has(input[value="erreicht"]:checked)  { border-color: var(--gut);    color: var(--gut); }
+.skala label:has(input[value="teilweise"]:checked) { border-color: var(--mittel); color: var(--mittel); }
+.skala label:has(input[value="nicht"]:checked)     { border-color: var(--offen);  color: var(--offen); }
+
+.beleg {
+  background: var(--flaeche);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1rem;
+  margin: 1.75rem 0 0;
+}
+
+.beleg legend {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+/* ---------- Tipp „zum Home-Bildschirm“ ---------- */
+
+.tipp {
+  text-align: left;
+  background: var(--grund);
+  border: 2px dashed var(--linie);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.tipp[hidden] { display: none; }
+.tipp-titel { margin: 0 0 0.4rem; font-weight: 600; }
+.tipp p { margin: 0 0 0.6rem; color: var(--text-leise); }
+.tipp ol { margin: 0; padding-left: 1.2rem; color: var(--text-leise); }
+.tipp li { margin-bottom: 0.3rem; }
+
+/* ---------- Verlauf ---------- */
+
+.eintrag {
+  background: var(--flaeche);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-left: 6px solid var(--linie);
+}
+
+.eintrag-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.eintrag-datum { font-weight: 600; }
+.eintrag-stufe { font-size: 0.9rem; color: var(--text-leise); }
+
+.eintrag-bilanz { display: flex; gap: 1rem; margin: 0.75rem 0 0; font-size: 0.95rem; }
+.eintrag-bilanz span { display: flex; align-items: center; gap: 0.3rem; }
+.bilanz-gut { color: var(--gut); }
+.bilanz-mittel { color: var(--mittel); }
+.bilanz-offen { color: var(--offen); }
+
+.eintrag-beleg {
+  margin: 0.85rem 0 0;
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--linie);
+  color: var(--text-leise);
+  font-style: italic;
+}
+
+.leer { color: var(--text-leise); padding: 2rem 0; text-align: center; }
+
+/* ---------- Navigation ---------- */
+
+.navigation {
+  position: fixed;
+  inset: auto 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--flaeche);
+  border-top: 1px solid var(--linie);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 5;
+}
+
+.navigation button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.25rem;
+  min-height: 58px;
+  font-size: 0.78rem;
+  color: var(--text-leise);
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.navigation button.aktiv { color: var(--stufe); font-weight: 600; }
+.nav-symbol { font-size: 1.25rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ansicht { animation: auftauchen 0.18s ease-out; }
+  @keyframes auftauchen { from { opacity: 0; } to { opacity: 1; } }
+}

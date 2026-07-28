@@ -1,0 +1,23 @@
+{
+  "name": "Meine Lernstufe",
+  "short_name": "Lernstufe",
+  "description": "Selbsteinschätzung zum Graduierungssystem der MS Rednitzhembach",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f8",
+  "theme_color": "#16506B",
+  "icons": [
+    { "src": "../symbole/symbol-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../symbole/symbol-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "../symbole/symbol-maskierbar-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
