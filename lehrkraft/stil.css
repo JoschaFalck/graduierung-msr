@@ -243,3 +243,21 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
   display: block; margin-bottom: 0.6rem; font-weight: 600;
   color: #fff; background: var(--stufe); border-color: var(--stufe);
 }
+
+/* ---------- Beispielmodus ---------- */
+
+.beispielleiste {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.45rem 1.5rem; font-size: 0.88rem;
+  color: #3a2f12; background: #f3c14b;
+}
+.beispiel-marke {
+  font-weight: 700; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #f3e2b8; background: #3a2f12; border-radius: 5px; padding: 0.1rem 0.45rem;
+}
+.beispielleiste button {
+  padding: 0.2rem 0.6rem; font: inherit; font-size: 0.85rem;
+  color: #3a2f12; background: rgb(255 255 255 / 55%);
+  border: 1px solid rgb(58 47 18 / 25%); border-radius: 6px;
+}
+#beispiel-oeffnen em { font-style: normal; opacity: 0.75; font-size: 0.85rem; }

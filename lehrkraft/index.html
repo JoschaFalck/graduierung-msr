@@ -24,6 +24,9 @@
     <div id="einstieg-start">
       <button type="button" class="knopf-gross" id="datei-oeffnen">Klassendatei öffnen</button>
       <button type="button" class="knopf-leise" id="datei-neu">Neue Klasse anlegen</button>
+      <button type="button" class="knopf-leise" id="beispiel-oeffnen">
+        Beispielklasse ansehen <em>– erfundene Daten, nichts wird gespeichert</em>
+      </button>
     </div>
 
     <!-- Neue Klasse -->
@@ -61,6 +64,13 @@
 
 <!-- Anwendung --------------------------------------------------------------->
 <div id="anwendung" hidden>
+  <div class="beispielleiste" id="beispielleiste" hidden>
+    <span class="beispiel-marke">Beispiel</span>
+    <span>Erfundene Kinder, erfundene Einschätzungen. Nichts wird gespeichert.</span>
+    <span class="leiste-fuell"></span>
+    <button type="button" id="beispiel-beenden">beenden</button>
+  </div>
+
   <header class="kopf">
     <div class="kopf-links">
       <p class="kopf-oben">Klasse <span id="kopf-klasse">–</span> · <span id="kopf-schuljahr">–</span></p>

@@ -6,6 +6,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
   sw.js                      Service Worker (offline-Betrieb)
   symbole/                   App-Symbole (Anker)
   gemeinsam/
+    beispieldaten.js         erfundene Klasse zum Ausprobieren (Beispielmodus)
     katalog.json           ← einzige Datenquelle: Stufen, Kriterien, Privilegien, Rückstufungstexte
     katalog.js               Laden, Stufenvererbung, Sammelzeilen, Rückstufungsbogen
     uebergabe.js             Format der Datei Kind → Lehrkraft (erzeugen, benennen, prüfen)
@@ -107,6 +108,16 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
   Bibliothek ist eigener Aufwand — erst bauen, wenn die Praxis zeigt, dass es gebraucht wird.
 - **Dateiendung `.json`** ist zu prüfen: falls iPadOS beim AirDrop zickt, ist der Wechsel auf
   `.txt` eine Zeile in `uebergabe.js`.
+
+## Ausprobieren ohne echte Daten
+
+- **Lehrkraft:** Knopf „Beispielklasse ansehen" auf der Einstiegsseite. 14 erfundene Kinder auf
+  allen vier Stufen, vier Zeiträume mit Selbst- und Fremdeinschätzungen, gewollte Abweichungen
+  zwischen beidem. Die Daten bleiben im Arbeitsspeicher: `speichern()` steigt bei
+  `datei.beispiel` sofort aus, es kann also weder eine Datei entstehen noch eine echte
+  Klassendatei überschrieben werden. Deterministisch aufgebaut -- derselbe Aufruf ergibt
+  immer dieselbe Klasse.
+- **Schüler:** `…/schueler/#test` blendet eine Leiste mit Stufenwechsel und Profil-Zurücksetzen ein.
 
 ## Noch offen in der Lehrkraft-Anwendung
 

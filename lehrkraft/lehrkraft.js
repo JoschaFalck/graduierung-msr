@@ -49,6 +49,16 @@ function einstiegVerdrahten() {
   $('#formular-neu').addEventListener('submit', (e) => { e.preventDefault(); klasseAnlegen(); });
   $('#formular-oeffnen').addEventListener('submit', (e) => { e.preventDefault(); dateiOeffnen(); });
 
+  $('#beispiel-oeffnen').addEventListener('click', async () => {
+    const { beispielklasse } = await import('../gemeinsam/beispieldaten.js');
+    datei = beispielklasse(katalog);
+    passwort = null;
+    griff = null;
+    offeneImporte = [];
+    anwendungZeigen();
+  });
+  $('#beispiel-beenden').addEventListener('click', () => location.reload());
+
   const start = $('#neu-start');
   if (!start.value) start.value = new Date().toISOString().slice(0, 10);
 }
@@ -132,6 +142,12 @@ async function dateiOeffnen() {
 /** Schreibt die Datei zurück. Ohne Schreibrecht wird sie heruntergeladen. */
 async function speichern({ neuerOrt = false } = {}) {
   if (!datei) return false;
+  // Beispieldaten bleiben im Arbeitsspeicher -- sie sollen nie als Datei
+  // herumliegen und schon gar nicht eine echte Klassendatei überschreiben.
+  if (datei.beispiel) {
+    gesichertZeigen(true);
+    return true;
+  }
   const bytes = await verschluesseln(datei, passwort);
   const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}.gradu`;
 
@@ -180,6 +196,7 @@ function gesichertZeigen(fertig) {
 function anwendungZeigen() {
   $('#einstieg').hidden = true;
   $('#anwendung').hidden = false;
+  $('#beispielleiste').hidden = !datei.beispiel;
   $('#kopf-klasse').textContent = datei.klasse;
   $('#kopf-schuljahr').textContent = datei.schuljahr;
   alesZeichnen();
@@ -513,7 +530,7 @@ function escapen(text) {
 }
 
 window.addEventListener('beforeunload', (e) => {
-  if (datei && $('#gesichert').dataset.zustand === 'offen') e.preventDefault();
+  if (datei && !datei.beispiel && $('#gesichert').dataset.zustand === 'offen') e.preventDefault();
 });
 
 starten();
