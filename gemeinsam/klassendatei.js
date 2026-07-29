@@ -206,9 +206,101 @@ export function uebergabeZuordnen(datei, uebergabe, schuelerId) {
   });
 }
 
+/**
+ * Wie viele der geforderten Zeilen sind erfasst? Die Zeilen-IDs kommen von
+ * bewertungszeilen() aus katalog.js -- diese Datei kennt den Katalog nicht.
+ * Ohne diese Zählung sähe eine halb ausgefüllte Fremdeinschätzung in der
+ * Übersicht genauso aus wie eine vollständige.
+ */
+export function erfassungsstand(datei, schuelerId, zeitraum, quelle, zeilenIds) {
+  const bewertungen = einschaetzung(datei, schuelerId, zeitraum, quelle)?.bewertungen ?? {};
+  const erfasst = zeilenIds.filter((id) => bewertungen[id]).length;
+  return { erfasst, gesamt: zeilenIds.length, vollstaendig: erfasst === zeilenIds.length };
+}
+
 /** Wer hat im laufenden Zeitraum noch nicht abgegeben? */
 export function fehlendeSelbsteinschaetzungen(datei, zeitraum = zeitraumFuer(datei)) {
   return datei.lernende.filter((l) => !einschaetzung(datei, l.id, zeitraum, 'selbst'));
+}
+
+// ---------------------------------------------------------------- Coaching
+
+/**
+ * Hält ein Coaching-Gespräch fest und setzt die Stufe entsprechend.
+ * `entscheidung`: 'hoch' | 'gleich' | 'runter'.
+ */
+export function coachingEintragen(datei, { schuelerId, zeitraum, entscheidung, begruendung,
+  vereinbarungen, gruende = [], gueltigAb, ausweisUebergeben = false, datum }) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) throw new Error('Unbekannte Person.');
+
+  const vonStufe = kind.stufe;
+  const nachStufe =
+    entscheidung === 'gleich' ? vonStufe : nachbarStufeId(datei, vonStufe, entscheidung);
+
+  const eintrag = {
+    id: kennung(),
+    schuelerId,
+    datum: datum ?? heute(),
+    zeitraum,
+    zeitraeume: zeitraeumeDesBlocks(datei, zeitraum),
+    entscheidung,
+    vonStufe,
+    nachStufe,
+    begruendung: begruendung?.trim() ?? '',
+    vereinbarungen: vereinbarungen?.trim() ?? '',
+    gruende,
+    gueltigAb: gueltigAb ?? heute(),
+    ausweisUebergeben,
+  };
+
+  datei.coachings.push(eintrag);
+  if (nachStufe !== vonStufe) {
+    kind.stufe = nachStufe;
+    kind.seit = eintrag.gueltigAb;
+  }
+  beruehren(datei);
+  return eintrag;
+}
+
+function nachbarStufeId(datei, stufenId, richtung) {
+  // Reihenfolge steckt im Katalog; hier reicht die bekannte Kette
+  const kette = ['hafen', 'ankerplatz', 'boie', 'freie-see'];
+  const i = kette.indexOf(stufenId);
+  const ziel = i + (richtung === 'hoch' ? 1 : -1);
+  return kette[Math.min(kette.length - 1, Math.max(0, ziel))];
+}
+
+/**
+ * Stufenverlauf eines Kindes über das Schuljahr -- aus den Coachings abgeleitet,
+ * damit es keine zweite Wahrheit gibt.
+ */
+export function stufenverlauf(datei, schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) return [];
+
+  const gespraeche = datei.coachings
+    .filter((c) => c.schuelerId === schuelerId)
+    .sort((a, b) => a.datum.localeCompare(b.datum));
+
+  const start = gespraeche.length ? gespraeche[0].vonStufe : kind.stufe;
+  const verlauf = [{ stufe: start, ab: null, anlass: 'Start' }];
+
+  for (const g of gespraeche) {
+    verlauf.push({
+      stufe: g.nachStufe,
+      ab: g.gueltigAb,
+      anlass: g.entscheidung,
+      coachingId: g.id,
+    });
+  }
+  return verlauf;
+}
+
+export function coachingsVon(datei, schuelerId) {
+  return datei.coachings
+    .filter((c) => c.schuelerId === schuelerId)
+    .sort((a, b) => b.datum.localeCompare(a.datum));
 }
 
 // ---------------------------------------------------------------- Hilfen

@@ -104,6 +104,29 @@ export function nachbarStufe(katalog, stufenId, richtung) {
   return katalog.stufen.find((s) => s.reihenfolge === ziel) ?? null;
 }
 
+/**
+ * Fasst mehrere Kriterienwerte zu einem Zeilenwert zusammen.
+ *
+ * Das Kind kreuzt einzelne Kriterien an, die Lehrkraft die Sammelzeile
+ * („Ich erfülle die Verantwortlichkeiten im Hafen"). Für den Coaching-Bogen
+ * müssen beide nebeneinanderstehen -- dafür wird die Selbstsicht verdichtet.
+ *
+ * Regel: der schlechteste Einzelwert zählt. „Ich erfülle die
+ * Verantwortlichkeiten im Hafen" ist nicht erfüllt, sobald eine davon fehlt.
+ * Gibt null zurück, wenn zu keinem Kriterium etwas vorliegt.
+ */
+export function zeilenwert(katalog, bewertungen, kriteriumIds) {
+  const rang = new Map(katalog.skala.map((s, i) => [s.id, i])); // 0 = bester
+  let schlechtester = null;
+
+  for (const id of kriteriumIds) {
+    const wert = bewertungen?.[id];
+    if (!wert || !rang.has(wert)) continue;
+    if (schlechtester === null || rang.get(wert) > rang.get(schlechtester)) schlechtester = wert;
+  }
+  return schlechtester;
+}
+
 /** Alle Rückstufungsgründe für eine Stufe — erzeugt den Rückstufungsbogen. */
 export function rueckstufungsgruende(katalog, vonStufenId) {
   return kriterienDerStufe(katalog, vonStufenId).map((k) => ({

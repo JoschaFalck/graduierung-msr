@@ -1,8 +1,11 @@
-// Lehrkraft-Anwendung -- Entwurf.
-// Enthalten: Klassendatei anlegen/öffnen/speichern, Übersicht, Import der
-// AirDrop-Dateien, Fremdeinschätzung. Coaching-Bogen und Druck folgen.
+// Lehrkraft-Anwendung.
+// Klassendatei anlegen/öffnen/speichern, Klassenübersicht, Import der
+// AirDrop-Dateien, Fremdeinschätzung, Verlauf je Kind, Coaching-Gespräch
+// mit Bogen, Entscheidung und Druckansicht.
 
-import { katalogLaden, stufe, bewertungszeilen, praeposition } from '../gemeinsam/katalog.js';
+import {
+  katalogLaden, stufe, bewertungszeilen, kriterienDerStufe, zeilenwert,
+} from '../gemeinsam/katalog.js';
 import { uebergabePruefen } from '../gemeinsam/uebergabe.js';
 import { verschluesseln, entschluesseln, passphraseGuete } from '../gemeinsam/tresor.js';
 import * as kd from '../gemeinsam/klassendatei.js';
@@ -32,7 +35,18 @@ async function starten() {
   einstiegVerdrahten();
   navigationVerdrahten();
   importVerdrahten();
+  klassenlisteVerdrahten(); // hängt am Container, überlebt jedes Neuzeichnen
+
+  $('#coaching-zurueck').addEventListener('click', () => kindZeigen(coachingKind.id));
+  $('#coaching-drucken').addEventListener('click', () => window.print());
+  $('#formular-coaching').addEventListener('submit', (e) => {
+    e.preventDefault();
+    coachingSpeichern();
+  });
   $('#kind-anlegen').addEventListener('click', kindAnlegen);
+  $('#kind-zurueck').addEventListener('click', () => {
+    document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
+  });
 }
 
 function einstiegVerdrahten() {
@@ -231,24 +245,397 @@ function klassenlisteZeichnen() {
   ziel.innerHTML = datei.lernende
     .map((kind) => {
       const s = stufe(katalog, kind.stufe);
+      const zeilenIds = bewertungszeilen(katalog, kind.stufe).map((r) => r.id);
+
       const punkte = kd
         .zeitraeumeDesBlocks(datei, zeitraum)
         .map((z) => {
-          const selbst = kd.einschaetzung(datei, kind.id, z, 'selbst');
-          const fremd = kd.einschaetzung(datei, kind.id, z, 'fremd');
-          const art = selbst && fremd ? 'beide' : selbst || fremd ? 'halb' : 'leer';
-          return `<span class="punkt ${art}" title="Zeitraum ${z}"></span>`;
+          const selbst = !!kd.einschaetzung(datei, kind.id, z, 'selbst');
+          const fremd = kd.erfassungsstand(datei, kind.id, z, 'fremd', zeilenIds);
+
+          // „beide“ erst, wenn die Fremdeinschätzung auch vollständig ist
+          const art =
+            selbst && fremd.vollstaendig ? 'beide' : selbst || fremd.erfasst ? 'halb' : 'leer';
+
+          const hinweis = [
+            `Zeitraum ${z}`,
+            selbst ? 'Selbsteinschätzung da' : 'Selbsteinschätzung fehlt',
+            `Fremdeinschätzung ${fremd.erfasst} von ${fremd.gesamt}`,
+          ].join(' · ');
+
+          return `<span class="punkt ${art}" title="${hinweis}"></span>`;
         })
         .join('');
 
       return `
-        <article class="kind" style="--farbe:${s.farbe}">
+        <article class="kind" style="--farbe:${s.farbe}" data-kind="${kind.id}" tabindex="0" role="button">
           <span class="kind-name">${escapen(kind.name)}</span>
           <span class="kind-stufe">${s.name}</span>
           <span class="kind-punkte">${punkte}</span>
         </article>`;
     })
     .join('');
+}
+
+// ---------------------------------------------------------------- Verlauf eines Kindes
+
+function kindZeigen(schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) return;
+
+  for (const a of document.querySelectorAll('.ansicht')) a.hidden = a.id !== 'ansicht-kind';
+  for (const k of document.querySelectorAll('.navigation button')) k.classList.remove('aktiv');
+  $('#kopf-titel').textContent = 'Verlauf';
+
+  const s = stufe(katalog, kind.stufe);
+  $('#kind-titel').textContent = kind.name;
+  $('#kind-unter').textContent = `${s.name} seit ${datumLang(kind.seit)}`;
+
+  const faellig = kd.coachingFaellig(datei);
+  $('#kind-coaching-starten').hidden = false;
+  $('#kind-coaching-starten').textContent = faellig
+    ? 'Coaching-Gespräch führen'
+    : 'Coaching-Gespräch führen (noch nicht fällig)';
+  $('#kind-coaching-starten').onclick = () => coachingZeigen(kind.id);
+
+  bandZeichnen(kind);
+  zeitraumtabelleZeichnen(kind);
+  coachingsZeichnen(kind);
+  window.scrollTo({ top: 0 });
+}
+
+function bandZeichnen(kind) {
+  const verlauf = kd.stufenverlauf(datei, kind.id);
+
+  $('#kind-band').innerHTML = `<div class="band">${verlauf
+    .map((schritt, i) => {
+      const s = stufe(katalog, schritt.stufe);
+      const pfeil =
+        i === 0
+          ? ''
+          : `<span class="band-pfeil ${schritt.anlass}">${
+              schritt.anlass === 'hoch' ? '↗' : schritt.anlass === 'runter' ? '↘' : '→'
+            }</span>`;
+      return `${pfeil}<span class="band-stufe" style="--farbe:${s.farbe}">
+                <b>${s.name}</b>
+                <small>${schritt.ab ? `ab ${datumKurz(schritt.ab)}` : 'Schuljahresbeginn'}</small>
+              </span>`;
+    })
+    .join('')}</div>`;
+}
+
+/** Alle Zeiträume mit Selbst- und Fremdsicht nebeneinander -- Abweichungen markiert. */
+function zeitraumtabelleZeichnen(kind) {
+  const bisher = kd.zeitraumFuer(datei);
+  const zeilen = [];
+
+  for (let z = 1; z <= bisher; z++) {
+    const selbst = kd.einschaetzung(datei, kind.id, z, 'selbst');
+    const fremd = kd.einschaetzung(datei, kind.id, z, 'fremd');
+    if (!selbst && !fremd) continue;
+
+    // gegen die damals gültige Stufe auswerten, nicht gegen die heutige
+    const damals = selbst?.stufe ?? fremd?.stufe ?? kind.stufe;
+    const zeilenIds = bewertungszeilen(katalog, damals).map((r) => r.id);
+    const kriterienIds = kriterienDerStufe(katalog, damals).map((k) => k.id);
+
+    zeilen.push(`
+      <tr>
+        <th scope="row">${z}</th>
+        <td>${bilanz(selbst?.bewertungen, kriterienIds)}</td>
+        <td>${bilanz(fremd?.bewertungen, zeilenIds)}</td>
+        <td class="beleg-spalte">${selbst?.beleg?.text ? escapen(selbst.beleg.text) : '<span class="leise">–</span>'}</td>
+      </tr>`);
+  }
+
+  $('#kind-zeitraeume').innerHTML = zeilen.length
+    ? `<table class="zeitraumtabelle">
+         <thead><tr><th>Zeitraum</th><th>Selbst</th><th>Lehrkraft</th><th>Beleg des Kindes</th></tr></thead>
+         <tbody>${zeilen.join('')}</tbody>
+       </table>`
+    : '<p class="leer">Noch keine Einschätzungen.</p>';
+}
+
+function bilanz(bewertungen, ids) {
+  if (!bewertungen) return '<span class="leise">fehlt</span>';
+  const zaehlen = (wert) => ids.filter((id) => bewertungen[id] === wert).length;
+  const offen = ids.filter((id) => !bewertungen[id]).length;
+  return `<span class="bilanz">
+      <span class="b-gut">${zaehlen('erreicht')}</span>
+      <span class="b-mittel">${zaehlen('teilweise')}</span>
+      <span class="b-offen">${zaehlen('nicht')}</span>
+      ${offen ? `<span class="leise">+${offen} offen</span>` : ''}
+    </span>`;
+}
+
+function coachingsZeichnen(kind) {
+  const gespraeche = kd.coachingsVon(datei, kind.id);
+
+  $('#kind-coachings').innerHTML = gespraeche.length
+    ? gespraeche
+        .map((c) => {
+          const wort = { hoch: 'Hochstufung', gleich: 'Stufe gehalten', runter: 'Rückstufung' }[c.entscheidung];
+          const gruende = c.gruende?.length
+            ? `<ul class="gruende">${c.gruende
+                .map((id) => `<li>${escapen(katalog.kriterien.find((k) => k.id === id)?.rueckstufung ?? id)}</li>`)
+                .join('')}</ul>`
+            : '';
+          return `
+            <article class="coaching ${c.entscheidung}">
+              <p class="coaching-kopf">
+                <strong>${wort}</strong> · ${datumLang(c.datum)}
+                ${c.vonStufe !== c.nachStufe
+                  ? `· ${stufe(katalog, c.vonStufe).name} → ${stufe(katalog, c.nachStufe).name}`
+                  : `· ${stufe(katalog, c.vonStufe).name}`}
+                ${c.ausweisUebergeben ? '<span class="marke-klein">Ausweis übergeben</span>' : ''}
+              </p>
+              ${c.begruendung ? `<p class="coaching-text">${escapen(c.begruendung)}</p>` : ''}
+              ${gruende}
+              ${c.vereinbarungen ? `<p class="coaching-text"><em>Vereinbarung:</em> ${escapen(c.vereinbarungen)}</p>` : ''}
+            </article>`;
+        })
+        .join('')
+    : '<p class="leer">Noch kein Coaching-Gespräch festgehalten.</p>';
+}
+
+function datumLang(iso) {
+  return iso
+    ? new Date(`${iso}T00:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '–';
+}
+
+function datumKurz(iso) {
+  return iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '';
+}
+
+function klassenlisteVerdrahten() {
+  const ziel = $('#klassenliste');
+  ziel.onclick = (e) => {
+    const karte = e.target.closest('[data-kind]');
+    if (karte) kindZeigen(karte.dataset.kind);
+  };
+  ziel.onkeydown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const karte = e.target.closest('[data-kind]');
+    if (!karte) return;
+    e.preventDefault();
+    kindZeigen(karte.dataset.kind);
+  };
+}
+
+// ---------------------------------------------------------------- Coaching-Gespräch
+
+let coachingKind = null;
+
+function coachingZeigen(schuelerId) {
+  coachingKind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!coachingKind) return;
+
+  for (const a of document.querySelectorAll('.ansicht')) a.hidden = a.id !== 'ansicht-coaching';
+  for (const k of document.querySelectorAll('.navigation button')) k.classList.remove('aktiv');
+
+  const s = stufe(katalog, coachingKind.stufe);
+  const zeitraum = kd.zeitraumFuer(datei);
+  const bloecke = kd.zeitraeumeDesBlocks(datei, zeitraum);
+
+  $('#kopf-titel').textContent = 'Coaching-Gespräch';
+  $('#coaching-titel').textContent = coachingKind.name;
+  $('#coaching-unter').textContent =
+    `Aktuell ${s.name} · Zeiträume ${bloecke[0]} bis ${bloecke.at(-1)}`;
+
+  bogenZeichnen(coachingKind, bloecke);
+  belegeZeichnen(coachingKind, bloecke);
+  entscheidungZeichnen(coachingKind);
+
+  $('#coaching-gueltigab').value = new Date().toISOString().slice(0, 10);
+  $('#coaching-begruendung').value = '';
+  $('#coaching-vereinbarungen').value = '';
+  $('#coaching-ausweis').checked = false;
+  $('#coaching-fehler').hidden = true;
+  window.scrollTo({ top: 0 });
+}
+
+/** Der Bogen: Zeilen der Stufe × Zeiträume, Selbst- und Fremdsicht nebeneinander. */
+function bogenZeichnen(kind, bloecke) {
+  const zeilen = bewertungszeilen(katalog, kind.stufe);
+  const kurz = Object.fromEntries(katalog.skala.map((s) => [s.id, s.kurz]));
+
+  const kopf = bloecke
+    .map((z) => `<th colspan="2" class="zr">${z}</th>`)
+    .join('');
+  const unterkopf = bloecke.map(() => '<th class="sl">S</th><th class="sl">L</th>').join('');
+
+  const koerper = zeilen
+    .map((zeile) => {
+      const kriteriumIds = zeile.enthaelt.map((k) => k.id);
+
+      const felder = bloecke
+        .map((z) => {
+          const selbst = kd.einschaetzung(datei, kind.id, z, 'selbst');
+          const fremd = kd.einschaetzung(datei, kind.id, z, 'fremd');
+
+          // Selbstsicht verdichten, Fremdsicht steht schon auf der Zeile
+          const sWert = zeilenwert(katalog, selbst?.bewertungen, kriteriumIds);
+          const lWert = fremd?.bewertungen?.[zeile.id] ?? null;
+          const uneins = sWert && lWert && sWert !== lWert;
+
+          return `
+            <td class="wert ${sWert ?? 'ohne'} ${uneins ? 'uneins' : ''}">${kurz[sWert] ?? '·'}</td>
+            <td class="wert ${lWert ?? 'ohne'} ${uneins ? 'uneins' : ''}">${kurz[lWert] ?? '·'}</td>`;
+        })
+        .join('');
+
+      const details =
+        zeile.art === 'sammel'
+          ? `<ul class="teilkriterien">${zeile.enthaelt
+              .map((k) => `<li>${escapen(k.text)}</li>`)
+              .join('')}</ul>`
+          : '';
+
+      return `<tr><th scope="row">${escapen(zeile.text)}${details}</th>${felder}</tr>`;
+    })
+    .join('');
+
+  $('#coaching-bogen').innerHTML = `
+    <table class="bogen">
+      <thead>
+        <tr><th rowspan="2" class="kriterienspalte">Verantwortung ${praepositionText(kind.stufe)}</th>${kopf}</tr>
+        <tr>${unterkopf}</tr>
+      </thead>
+      <tbody>${koerper}</tbody>
+    </table>
+    <p class="legende">${katalog.skala.map((s) => `<b>${s.kurz}</b> ${s.text}`).join(' · ')}</p>`;
+}
+
+function praepositionText(stufenId) {
+  return { hafen: 'im Hafen', ankerplatz: 'am Ankerplatz', boie: 'an der Boie',
+    'freie-see': 'auf Freier See' }[stufenId] ?? '';
+}
+
+function belegeZeichnen(kind, bloecke) {
+  const belege = bloecke
+    .map((z) => ({ z, e: kd.einschaetzung(datei, kind.id, z, 'selbst') }))
+    .filter(({ e }) => e?.beleg?.text);
+
+  $('#coaching-belege').innerHTML = belege.length
+    ? belege
+        .map(({ z, e }) => {
+          const k = katalog.kriterien.find((x) => x.id === e.beleg.kriteriumId);
+          return `<blockquote class="beleg-zitat">
+                    <p class="beleg-zu">Zeitraum ${z}${k ? ` · ${escapen(k.text)}` : ''}</p>
+                    <p>${escapen(e.beleg.text)}</p>
+                  </blockquote>`;
+        })
+        .join('')
+    : '<p class="leer">Keine Belegsätze in diesem Block.</p>';
+}
+
+function entscheidungZeichnen(kind) {
+  const hoch = kd_nachbar(kind.stufe, 'hoch');
+  const runter = kd_nachbar(kind.stufe, 'runter');
+
+  const auswahl = [
+    hoch && { wert: 'hoch', titel: `Hochstufung auf ${stufe(katalog, hoch).name}`,
+      text: 'Die Verantwortung dieser Stufe wird erfüllt.' },
+    { wert: 'gleich', titel: `${stufe(katalog, kind.stufe).name} halten`,
+      text: 'Noch nicht so weit – mit Begründung.' },
+    runter && { wert: 'runter', titel: `Rückstufung auf ${stufe(katalog, runter).name}`,
+      text: 'Die Verantwortung wird über längere Zeit nicht erfüllt.' },
+  ].filter(Boolean);
+
+  $('#coaching-entscheidung').innerHTML = auswahl
+    .map(
+      (a) => `
+      <label class="entscheidung-feld" data-wert="${a.wert}">
+        <input type="radio" name="entscheidung" value="${a.wert}">
+        <span class="entscheidung-titel">${a.titel}</span>
+        <span class="entscheidung-text">${a.text}</span>
+      </label>`
+    )
+    .join('');
+
+  $('#coaching-entscheidung').onchange = (e) => entscheidungWechsel(e.target.value, kind);
+  entscheidungWechsel(null, kind);
+}
+
+function kd_nachbar(stufenId, richtung) {
+  const kette = katalog.stufen.map((s) => s.id);
+  const ziel = kette.indexOf(stufenId) + (richtung === 'hoch' ? 1 : -1);
+  return kette[ziel] ?? null;
+}
+
+function entscheidungWechsel(wert, kind) {
+  for (const feld of document.querySelectorAll('.entscheidung-feld')) {
+    feld.classList.toggle('gewaehlt', feld.dataset.wert === wert);
+  }
+
+  $('#feld-gruende').hidden = wert !== 'runter';
+  $('#feld-vereinbarungen').hidden = wert !== 'runter';
+  $('#begruendung-pflicht').hidden = wert !== 'gleich';
+  $('#coaching-ausweis').closest('.haken-feld').hidden = wert === 'gleich';
+
+  if (wert === 'runter') gruendeZeichnen(kind);
+}
+
+/** Die Ankreuzliste entsteht aus dem Katalog -- kein zweiter Bogen zu pflegen. */
+function gruendeZeichnen(kind) {
+  $('#coaching-gruende').innerHTML = kd_rueckstufungsgruende(kind.stufe)
+    .map(
+      (g) => `
+      <label class="grund">
+        <input type="checkbox" value="${g.id}">
+        <span>Er/sie ${escapen(g.text)}</span>
+      </label>`
+    )
+    .join('');
+}
+
+function kd_rueckstufungsgruende(stufenId) {
+  return kriterienDerStufe(katalog, stufenId).map((k) => ({ id: k.id, text: k.rueckstufung }));
+}
+
+function coachingSpeichern() {
+  const gewaehlt = document.querySelector('input[name="entscheidung"]:checked');
+  const meldung = $('#coaching-fehler');
+
+  if (!gewaehlt) {
+    meldung.textContent = 'Bitte wähle aus, wie das Gespräch ausgegangen ist.';
+    meldung.hidden = false;
+    return;
+  }
+
+  const entscheidung = gewaehlt.value;
+  const begruendung = $('#coaching-begruendung').value.trim();
+  const gruende = [...document.querySelectorAll('#coaching-gruende input:checked')].map((i) => i.value);
+
+  // Der Papierbogen verlangt bei gleicher Stufe eine Begründung -- hier auch
+  if (entscheidung === 'gleich' && begruendung.length < 10) {
+    meldung.textContent = 'Bei gleicher Stufe gehört eine Begründung dazu.';
+    meldung.hidden = false;
+    $('#coaching-begruendung').focus();
+    return;
+  }
+  if (entscheidung === 'runter' && !gruende.length) {
+    meldung.textContent = 'Kreuze mindestens einen Grund für die Rückstufung an.';
+    meldung.hidden = false;
+    return;
+  }
+
+  meldung.hidden = true;
+  kd.coachingEintragen(datei, {
+    schuelerId: coachingKind.id,
+    zeitraum: kd.zeitraumFuer(datei),
+    entscheidung,
+    begruendung,
+    vereinbarungen: $('#coaching-vereinbarungen').value,
+    gruende,
+    gueltigAb: $('#coaching-gueltigab').value || undefined,
+    ausweisUebergeben: $('#coaching-ausweis').checked,
+  });
+
+  merken();
+  alesZeichnen();
+  kindZeigen(coachingKind.id);
 }
 
 function kindAnlegen() {
@@ -439,11 +826,13 @@ function zeilenwahlZeichnen() {
   if (!zeileAktiv || !zeilen.has(zeileAktiv)) zeileAktiv = liste[0].id;
 
   $('#zeilenwahl').innerHTML = liste
-    .map(
-      (z) =>
-        `<button type="button" class="zeile ${z.id === zeileAktiv ? 'aktiv' : ''}"
-                 data-zeile="${z.id}">${escapen(z.text)}</button>`
-    )
+    .map((z) => {
+      const stand = zeilenstand(z.id);
+      return `<button type="button" class="zeile ${z.id === zeileAktiv ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
+                      data-zeile="${z.id}">${escapen(z.text)}
+                <span class="zeile-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
+              </button>`;
+    })
     .join('');
 
   for (const knopf of $('#zeilenwahl').querySelectorAll('[data-zeile]')) {
@@ -454,6 +843,28 @@ function zeilenwahlZeichnen() {
   }
 
   fremdRasterZeichnen(zeilen.get(zeileAktiv));
+}
+
+/** Wie viele der betroffenen Kinder sind für diese Zeile schon eingeschätzt? */
+function zeilenstand(zeileId, zeitraum = kd.zeitraumFuer(datei)) {
+  const betroffen = datei.lernende.filter((k) =>
+    bewertungszeilen(katalog, k.stufe).some((x) => x.id === zeileId)
+  );
+  const erfasst = betroffen.filter(
+    (k) => kd.einschaetzung(datei, k.id, zeitraum, 'fremd')?.bewertungen?.[zeileId]
+  ).length;
+  return { erfasst, gesamt: betroffen.length, fertig: !!betroffen.length && erfasst === betroffen.length };
+}
+
+/** Nur die Zähler auffrischen -- ein Neuzeichnen würde den Fokus verlieren. */
+function zeilenstaendeAuffrischen() {
+  for (const knopf of document.querySelectorAll('[data-zeile]')) {
+    const stand = zeilenstand(knopf.dataset.zeile);
+    knopf.classList.toggle('fertig', stand.fertig);
+    knopf.querySelector('.zeile-stand').textContent = stand.fertig
+      ? '✓'
+      : `${stand.erfasst}/${stand.gesamt}`;
+  }
 }
 
 function fremdRasterZeichnen(zeile) {
@@ -491,10 +902,14 @@ function fremdRasterZeichnen(zeile) {
 
   $('#fremd-raster').onchange = (ereignis) => {
     const zeileEl = ereignis.target.closest('.rasterzeile');
+    const kind = datei.lernende.find((l) => l.id === zeileEl.dataset.schueler);
     kd.einschaetzungSetzen(datei, {
-      schuelerId: zeileEl.dataset.schueler,
+      schuelerId: kind.id,
       zeitraum,
       quelle: 'fremd',
+      // Stufe mitschreiben: später ist sonst nicht mehr erkennbar, gegen
+      // welche Anforderungen damals bewertet wurde
+      stufe: kind.stufe,
       bewertungen: { [zeile.id]: ereignis.target.value },
     });
     for (const l of zeileEl.querySelectorAll('label')) {
@@ -502,6 +917,7 @@ function fremdRasterZeichnen(zeile) {
     }
     merken();
     klassenlisteZeichnen();
+    zeilenstaendeAuffrischen();
   };
 }
 

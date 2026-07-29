@@ -261,3 +261,173 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
   border: 1px solid rgb(58 47 18 / 25%); border-radius: 6px;
 }
 #beispiel-oeffnen em { font-style: normal; opacity: 0.75; font-size: 0.85rem; }
+
+/* ---------- Verlauf eines Kindes ---------- */
+
+.kind[data-kind] { cursor: pointer; }
+.kind[data-kind]:hover { background: var(--grund); }
+.kind[data-kind]:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+.kind-titel { margin: 1rem 0 0.25rem; }
+#kind-unter { margin-top: 0; }
+
+.band { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.band-stufe {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  padding: 0.55rem 0.9rem; background: var(--flaeche);
+  border-left: 5px solid var(--farbe); border-radius: 10px; box-shadow: var(--schatten);
+}
+.band-stufe b { color: var(--farbe); }
+.band-stufe small { color: var(--text-leise); font-size: 0.8rem; }
+.band-pfeil { font-size: 1.2rem; color: var(--text-leise); }
+.band-pfeil.hoch { color: var(--gut); }
+.band-pfeil.runter { color: var(--offen); }
+
+.tabellenrahmen { overflow-x: auto; }
+.zeitraumtabelle {
+  width: 100%; border-collapse: collapse;
+  background: var(--flaeche); border-radius: 10px; box-shadow: var(--schatten);
+}
+.zeitraumtabelle th, .zeitraumtabelle td {
+  padding: 0.5rem 0.8rem; text-align: left; border-bottom: 1px solid var(--linie);
+  vertical-align: top;
+}
+.zeitraumtabelle thead th {
+  font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-leise);
+}
+.zeitraumtabelle tbody th { font-weight: 600; width: 5rem; }
+.zeitraumtabelle tr:last-child td, .zeitraumtabelle tr:last-child th { border-bottom: 0; }
+.beleg-spalte { color: var(--text-leise); font-style: italic; max-width: 26rem; }
+
+.bilanz { display: inline-flex; gap: 0.45rem; font-variant-numeric: tabular-nums; }
+.bilanz span { font-weight: 600; }
+.b-gut { color: var(--gut); }
+.b-mittel { color: var(--mittel); }
+.b-offen { color: var(--offen); }
+.leise { color: var(--text-leise); font-weight: 400; }
+
+.coaching {
+  padding: 0.8rem 1rem; margin-bottom: 0.5rem;
+  background: var(--flaeche); border-left: 5px solid var(--linie);
+  border-radius: 10px; box-shadow: var(--schatten);
+}
+.coaching.hoch { border-left-color: var(--gut); }
+.coaching.runter { border-left-color: var(--offen); }
+.coaching-kopf { margin: 0; }
+.coaching-text { margin: 0.5rem 0 0; color: var(--text-leise); }
+.gruende { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--text-leise); font-size: 0.92rem; }
+.marke-klein {
+  margin-left: 0.4rem; padding: 0.05rem 0.4rem; font-size: 0.78rem;
+  color: var(--text-leise); background: var(--grund); border-radius: 5px;
+}
+
+.zeile { display: inline-flex; align-items: center; gap: 0.5rem; }
+.zeile-stand {
+  font-size: 0.78rem; font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.35rem; border-radius: 5px;
+  background: var(--grund); color: var(--text-leise);
+}
+.zeile.aktiv .zeile-stand { background: rgb(255 255 255 / 22%); color: #fff; }
+.zeile.fertig:not(.aktiv) .zeile-stand { background: var(--gut); color: #fff; }
+
+/* ---------- Breite Bildschirme ---------- */
+
+@media (min-width: 60rem) {
+  .inhalt { max-width: 78rem; }
+
+  /* zwei Kinder je Reihe -- 25 Namen passen so ohne langes Scrollen */
+  #klassenliste { display: grid; grid-template-columns: 1fr 1fr; gap: 0 0.5rem; }
+
+  /* die Erfassung bleibt einspaltig: eine Spalte je Kriterium hält den Blick ruhig */
+  .rasterzeile { padding: 0.55rem 1.1rem; }
+}
+
+@media (min-width: 78rem) {
+  #klassenliste { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- Coaching-Bogen ---------- */
+
+.knopf-gross.schmal { width: auto; padding-inline: 1.5rem; margin: 1rem 0 0; }
+
+.bogen { width: 100%; border-collapse: collapse; background: var(--flaeche);
+         border-radius: 10px; box-shadow: var(--schatten); overflow: hidden; }
+.bogen th, .bogen td { border: 1px solid var(--linie); padding: 0.4rem 0.6rem; }
+.bogen thead th { background: var(--grund); font-size: 0.85rem; }
+.bogen .zr { text-align: center; }
+.bogen .sl { width: 2.2rem; text-align: center; font-size: 0.78rem; color: var(--text-leise); }
+.bogen .kriterienspalte { text-align: left; min-width: 18rem; }
+.bogen tbody th { text-align: left; font-weight: 500; vertical-align: top; }
+
+.teilkriterien { margin: 0.35rem 0 0; padding-left: 1rem; font-size: 0.85rem;
+                 color: var(--text-leise); font-weight: 400; }
+
+.bogen .wert { width: 2.2rem; text-align: center; font-weight: 700; font-size: 1.05rem; }
+.bogen .wert.erreicht { color: var(--gut); }
+.bogen .wert.teilweise { color: var(--mittel); }
+.bogen .wert.nicht { color: var(--offen); }
+.bogen .wert.ohne { color: var(--linie); }
+/* Abweichung zwischen Selbst- und Fremdsicht -- der Gesprächsstoff */
+.bogen .wert.uneins { background: #fdf3d7; }
+@media (prefers-color-scheme: dark) { .bogen .wert.uneins { background: #40371d; } }
+
+.legende { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--text-leise); }
+
+.beleg-zitat { margin: 0 0 0.5rem; padding: 0.7rem 1rem; background: var(--flaeche);
+               border-left: 4px solid var(--stufe); border-radius: 0 10px 10px 0;
+               box-shadow: var(--schatten); }
+.beleg-zitat p { margin: 0; }
+.beleg-zu { font-size: 0.82rem; color: var(--text-leise); margin-bottom: 0.25rem !important; }
+
+/* ---------- Entscheidung ---------- */
+
+.entscheidung { display: grid; gap: 0.5rem; margin-bottom: 1.25rem; }
+@media (min-width: 52rem) { .entscheidung { grid-template-columns: repeat(3, 1fr); } }
+
+.entscheidung-feld {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 0.85rem 1rem; background: var(--flaeche);
+  border: 2px solid var(--linie); border-radius: 10px; cursor: pointer;
+}
+.entscheidung-feld input { position: absolute; opacity: 0; pointer-events: none; }
+.entscheidung-titel { font-weight: 600; }
+.entscheidung-text { font-size: 0.88rem; color: var(--text-leise); }
+.entscheidung-feld.gewaehlt { border-color: var(--stufe); background: var(--grund); }
+.entscheidung-feld[data-wert="runter"].gewaehlt { border-color: var(--offen); }
+.entscheidung-feld:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+.gruendeliste { display: grid; gap: 0.3rem; }
+.grund { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.5rem 0.7rem;
+         background: var(--flaeche); border-radius: 8px; box-shadow: var(--schatten); }
+.grund input { margin-top: 0.2rem; }
+
+.zwei-spalten { display: grid; gap: 1rem; }
+@media (min-width: 40rem) { .zwei-spalten { grid-template-columns: 1fr 1fr; align-items: end; } }
+.haken-feld { display: flex; align-items: center; gap: 0.6rem; }
+.haken-feld > span { font-weight: 400; margin: 0; }
+
+textarea { width: 100%; padding: 0.6rem 0.7rem; font: inherit; color: var(--text);
+           background: var(--grund); border: 2px solid var(--linie); border-radius: 8px;
+           resize: vertical; }
+textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
+#begruendung-pflicht { font-style: normal; font-weight: 400; color: var(--text-leise); }
+
+/* ---------- Druck: nur der Bogen ---------- */
+
+@media print {
+  .beispielleiste, .leiste, .navigation, .kopf-logo-feld,
+  #coaching-zurueck, #coaching-drucken, .hinweis { display: none !important; }
+  body { background: #fff; font-size: 11pt; }
+  .kopf { background: none; color: #000; padding: 0; border-bottom: 2px solid #000; }
+  .inhalt { max-width: none; padding: 0; }
+  .bogen, .beleg-zitat, .entscheidung-feld, .grund { box-shadow: none; }
+  .bogen .wert.uneins { background: #eee; }
+  .entscheidung-feld { break-inside: avoid; }
+  h2 { margin-top: 1rem; }
+  /* Platz für die Unterschriften */
+  #formular-coaching::after {
+    content: "Unterschrift Schüler/Schülerin                    Unterschrift Klassenlehrkraft";
+    display: block; margin-top: 3rem; padding-top: 0.4rem;
+    border-top: 1px solid #000; font-size: 10pt; white-space: pre;
+  }
+}

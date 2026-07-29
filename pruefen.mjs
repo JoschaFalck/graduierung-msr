@@ -340,4 +340,155 @@ test('bewusstes Anlegen erzeugt Kind samt Einschätzung', () => {
   assert.ok(kd.einschaetzung(datei2, kind.id, 1, 'selbst'));
 });
 
+
+console.log('\nCoaching und Stufenverlauf');
+const datei3 = kd.klasseAnlegen({ klasse: '9a', schuljahr: '2026/27',
+  zyklusStart: '2026-09-14', katalogVersion: katalog.version });
+const tom = kd.lernendeAnlegen(datei3, 'Tom Berg', 'hafen');
+
+test('Hochstufung ändert die Stufe und hält das Gespräch fest', () => {
+  const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 4,
+    entscheidung: 'hoch', datum: '2026-11-06', gueltigAb: '2026-11-09', ausweisUebergeben: true });
+  assert.equal(c.vonStufe, 'hafen');
+  assert.equal(c.nachStufe, 'ankerplatz');
+  assert.deepEqual(c.zeitraeume, [1, 2, 3, 4]);
+  assert.equal(kd.lernendeSuchen(datei3, 'Tom Berg').stufe, 'ankerplatz');
+  assert.equal(kd.lernendeSuchen(datei3, 'Tom Berg').seit, '2026-11-09');
+});
+
+test('Stufe halten lässt die Stufe unverändert', () => {
+  const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 8,
+    entscheidung: 'gleich', datum: '2027-01-15', begruendung: 'Termine noch unzuverlässig.' });
+  assert.equal(c.nachStufe, 'ankerplatz');
+  assert.equal(kd.lernendeSuchen(datei3, 'Tom Berg').stufe, 'ankerplatz');
+});
+
+test('Rückstufung geht eine Stufe zurück, mit Gründen', () => {
+  const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 12,
+    entscheidung: 'runter', datum: '2027-03-12', gruende: ['H2', 'A1'],
+    vereinbarungen: 'Logbuch freitags vorzeigen.' });
+  assert.equal(c.nachStufe, 'hafen');
+  assert.deepEqual(c.gruende, ['H2', 'A1']);
+  assert.equal(kd.lernendeSuchen(datei3, 'Tom Berg').stufe, 'hafen');
+});
+
+test('unterste Stufe lässt sich nicht weiter zurückstufen', () => {
+  const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 16,
+    entscheidung: 'runter', datum: '2027-05-07' });
+  assert.equal(c.nachStufe, 'hafen');
+});
+
+test('Stufenverlauf bildet den Weg vollständig ab', () => {
+  const verlauf = kd.stufenverlauf(datei3, tom.id);
+  assert.deepEqual(verlauf.map(s => s.stufe), ['hafen', 'ankerplatz', 'ankerplatz', 'hafen', 'hafen']);
+  assert.equal(verlauf[0].ab, null, 'Startpunkt hat kein Datum');
+  assert.equal(verlauf[1].anlass, 'hoch');
+});
+
+test('Coachings kommen neueste zuerst', () => {
+  const liste = kd.coachingsVon(datei3, tom.id);
+  assert.equal(liste.length, 4);
+  assert.ok(liste[0].datum > liste[1].datum);
+});
+
+test('Erfassungsstand zählt nur die geforderten Zeilen', () => {
+  const zeilen = bewertungszeilen(katalog, 'ankerplatz').map(z => z.id);
+  assert.deepEqual(zeilen, ['stufe:hafen', 'A1', 'A2']);
+  kd.einschaetzungSetzen(datei3, { schuelerId: tom.id, zeitraum: 1, quelle: 'fremd',
+    bewertungen: { 'stufe:hafen': 'erreicht', A1: 'teilweise' } });
+  const stand = kd.erfassungsstand(datei3, tom.id, 1, 'fremd', zeilen);
+  assert.deepEqual([stand.erfasst, stand.gesamt, stand.vollstaendig], [2, 3, false]);
+  kd.einschaetzungSetzen(datei3, { schuelerId: tom.id, zeitraum: 1, quelle: 'fremd',
+    bewertungen: { A2: 'erreicht' } });
+  assert.equal(kd.erfassungsstand(datei3, tom.id, 1, 'fremd', zeilen).vollstaendig, true);
+});
+
+console.log('\nBeispieldaten');
+const { beispielklasse } = await import(`${BASIS}/beispieldaten.js`);
+const beispiel = beispielklasse(katalog);
+
+test('Beispielklasse hat Kinder, Einschätzungen und Coachings', () => {
+  assert.equal(beispiel.lernende.length, 14);
+  assert.ok(beispiel.coachings.length >= 28, `nur ${beispiel.coachings.length} Coachings`);
+  assert.ok(beispiel.einschaetzungen.length > 300);
+  assert.equal(beispiel.beispiel, true, 'Kennzeichnung fehlt -- sonst würde gespeichert');
+});
+
+test('Beispielverläufe enthalten Hoch- und Rückstufungen', () => {
+  const arten = new Set(beispiel.coachings.map(c => c.entscheidung));
+  assert.ok(arten.has('hoch') && arten.has('runter') && arten.has('gleich'),
+    `nur: ${[...arten].join(', ')}`);
+});
+
+test('jedes Beispielkind hat einen mehrstufigen Verlauf', () => {
+  for (const kind of beispiel.lernende) {
+    const verlauf = kd.stufenverlauf(beispiel, kind.id);
+    assert.ok(verlauf.length >= 3, `${kind.name}: nur ${verlauf.length} Schritte`);
+  }
+});
+
+test('Beispiel ist reproduzierbar', () => {
+  const zweite = beispielklasse(katalog);
+  assert.deepEqual(zweite.lernende.map(l => l.stufe), beispiel.lernende.map(l => l.stufe));
+  assert.deepEqual(zweite.coachings.map(c => c.entscheidung), beispiel.coachings.map(c => c.entscheidung));
+});
+
+test('Rückstufungen im Beispiel tragen Gründe aus dem Katalog', () => {
+  const runter = beispiel.coachings.filter(c => c.entscheidung === 'runter');
+  assert.ok(runter.length, 'keine Rückstufung im Beispiel');
+  for (const c of runter) {
+    assert.ok(c.gruende.length, 'Rückstufung ohne Gründe');
+    for (const id of c.gruende) {
+      assert.ok(katalog.kriterien.some(k => k.id === id), `unbekannter Grund ${id}`);
+    }
+  }
+});
+
+
+console.log('\nCoaching-Bogen: Selbst- und Fremdsicht nebeneinander');
+const { zeilenwert } = await import(`${BASIS}/katalog.js`);
+
+test('Zeilenwert nimmt den schlechtesten Einzelwert', () => {
+  const alle = { H1: 'erreicht', H2: 'erreicht', H3: 'erreicht' };
+  assert.equal(zeilenwert(katalog, alle, ['H1','H2','H3']), 'erreicht');
+  assert.equal(zeilenwert(katalog, { ...alle, H2: 'teilweise' }, ['H1','H2','H3']), 'teilweise');
+  assert.equal(zeilenwert(katalog, { ...alle, H2: 'teilweise', H3: 'nicht' }, ['H1','H2','H3']), 'nicht');
+});
+
+test('Zeilenwert ignoriert fehlende und unbekannte Werte', () => {
+  assert.equal(zeilenwert(katalog, { H1: 'erreicht' }, ['H1','H2']), 'erreicht');
+  assert.equal(zeilenwert(katalog, {}, ['H1','H2']), null);
+  assert.equal(zeilenwert(katalog, undefined, ['H1']), null);
+  assert.equal(zeilenwert(katalog, { H1: 'quatsch' }, ['H1']), null);
+});
+
+test('so lassen sich beide Sichten je Zeile vergleichen', () => {
+  // Kind kreuzt Einzelkriterien an, Lehrkraft die Sammelzeile
+  const bogen = kd.klasseAnlegen({ klasse: '8c', schuljahr: '2026/27',
+    zyklusStart: '2026-09-14', katalogVersion: katalog.version });
+  const kind = kd.lernendeAnlegen(bogen, 'Nora Klein', 'ankerplatz');
+
+  kd.einschaetzungSetzen(bogen, { schuelerId: kind.id, zeitraum: 1, quelle: 'selbst',
+    bewertungen: Object.fromEntries(kriterienDerStufe(katalog, 'ankerplatz').map(k => [k.id, 'erreicht'])) });
+  kd.einschaetzungSetzen(bogen, { schuelerId: kind.id, zeitraum: 1, quelle: 'fremd',
+    bewertungen: { 'stufe:hafen': 'teilweise', A1: 'erreicht', A2: 'erreicht' } });
+
+  const zeilen = bewertungszeilen(katalog, 'ankerplatz');
+  const selbst = kd.einschaetzung(bogen, kind.id, 1, 'selbst').bewertungen;
+  const fremd = kd.einschaetzung(bogen, kind.id, 1, 'fremd').bewertungen;
+
+  const paare = zeilen.map(z => ({
+    zeile: z.id,
+    s: zeilenwert(katalog, selbst, z.enthaelt.map(k => k.id)),
+    l: fremd[z.id] ?? null,
+  }));
+  assert.deepEqual(paare, [
+    { zeile: 'stufe:hafen', s: 'erreicht', l: 'teilweise' },
+    { zeile: 'A1', s: 'erreicht', l: 'erreicht' },
+    { zeile: 'A2', s: 'erreicht', l: 'erreicht' },
+  ]);
+  // genau eine Abweichung -- die wird im Bogen hervorgehoben
+  assert.equal(paare.filter(p => p.s && p.l && p.s !== p.l).length, 1);
+});
+
 console.log(`\n${geprueft} Prüfungen bestanden.\n`);

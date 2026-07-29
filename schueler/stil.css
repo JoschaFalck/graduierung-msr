@@ -711,3 +711,66 @@ button {
 .hilfe ul { padding-left: 1.1rem; }
 .hilfe li { margin-bottom: 0.35rem; }
 .hilfe strong { color: var(--text); }
+
+/* ---------- Querformat: iPad quer, ab etwa 48rem ----------
+   Die Kinder arbeiten am liegenden iPad. Dort steht die Skala neben dem
+   Kriterium statt darunter -- das halbiert die Höhe und damit das Scrollen. */
+
+@media (min-width: 48rem) {
+  .inhalt { max-width: 62rem; padding-inline: 2rem; }
+
+  .kriterium {
+    display: grid;
+    grid-template-columns: 1fr 24rem;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.9rem 1.1rem;
+  }
+
+  .kriterium-text { margin: 0; }
+  .skala { gap: 0.6rem; }
+  .skala label { min-height: 60px; }
+
+  /* Ausweis: die beiden Listen nebeneinander */
+  .liste { grid-template-columns: 1fr 1fr; }
+  .liste-verantwortung .gruppe { grid-column: 1 / -1; }
+
+  .ausweis { padding-right: 11rem; min-height: 10.5rem; }
+  .ausweis-symbol { max-width: 8rem; height: 7.5rem; }
+
+  .hilfe p, .hilfe ul { max-width: 46rem; }
+
+  /* Fortschritt und Gruppentitel bekommen mehr Luft */
+  .fortschritt { padding-top: 0.9rem; }
+  .gruppentitel { margin-top: 2.1rem; }
+}
+
+/* Sehr breit (iPad Pro quer, Desktop): Kriterien zweispaltig */
+@media (min-width: 68rem) {
+  .inhalt { max-width: 76rem; }
+
+  #kriterien-liste {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 0.75rem;
+    align-items: start;
+  }
+
+  .gruppentitel { grid-column: 1 / -1; }
+  .kriterium { grid-template-columns: 1fr 19rem; gap: 1rem; }
+  .beleg { max-width: 46rem; }
+}
+
+/* Im Querformat stehen die Erklärungen nebeneinander statt untereinander --
+   sonst schieben sie die eigentliche Aufgabe aus dem Bild. */
+@media (min-width: 48rem) {
+  .hilfen {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    align-items: start;
+  }
+  .hilfen .hilfe { margin-bottom: 0; }
+  .hilfen summary { padding: 0.75rem 0.85rem; min-height: 46px; font-size: 0.95rem; }
+  .hilfen .hilfe p, .hilfen .hilfe ul { margin-inline: 0.85rem; font-size: 0.95rem; }
+}

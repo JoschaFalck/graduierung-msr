@@ -110,6 +110,77 @@
       <div id="import-fehlliste"></div>
     </section>
 
+    <!-- Verlauf eines Kindes -->
+    <section class="ansicht" id="ansicht-kind" hidden>
+      <button type="button" class="knopf-klein" id="kind-zurueck">← Zur Übersicht</button>
+      <h1 class="kind-titel" id="kind-titel">–</h1>
+      <p class="lang" id="kind-unter">–</p>
+
+      <button type="button" class="knopf-gross schmal" id="kind-coaching-starten" hidden>
+        Coaching-Gespräch führen</button>
+
+      <h2>Stufenverlauf</h2>
+      <div id="kind-band"></div>
+
+      <h2>Zeiträume</h2>
+      <div class="tabellenrahmen"><div id="kind-zeitraeume"></div></div>
+
+      <h2>Coaching-Gespräche</h2>
+      <div id="kind-coachings"></div>
+    </section>
+
+    <!-- Coaching-Gespräch -->
+    <section class="ansicht" id="ansicht-coaching" hidden>
+      <button type="button" class="knopf-klein" id="coaching-zurueck">← Zurück</button>
+      <h1 class="kind-titel" id="coaching-titel">–</h1>
+      <p class="lang" id="coaching-unter">–</p>
+
+      <h2>Der Bogen</h2>
+      <p class="hinweis">S = Selbsteinschätzung, L = Lehrkraft.
+        Gelb hinterlegt heißt: Die beiden Sichten gehen auseinander – dort lohnt das Nachfragen.</p>
+      <div class="tabellenrahmen"><div id="coaching-bogen"></div></div>
+
+      <h2>Was das Kind geschrieben hat</h2>
+      <div id="coaching-belege"></div>
+
+      <h2>Auswertung des Gesprächs</h2>
+      <form id="formular-coaching">
+        <div class="entscheidung" id="coaching-entscheidung"></div>
+
+        <label class="feld" id="feld-begruendung">
+          <span>Begründung <em id="begruendung-pflicht">(bei gleicher Stufe erforderlich)</em></span>
+          <textarea id="coaching-begruendung" rows="3"
+                    placeholder="Woran wird weitergearbeitet?"></textarea>
+        </label>
+
+        <div class="feld" id="feld-gruende" hidden>
+          <span>Gründe für die Rückstufung</span>
+          <p class="hinweis">Aus dem Kriterienkatalog der Stufe, aus der zurückgestuft wird.</p>
+          <div id="coaching-gruende" class="gruendeliste"></div>
+        </div>
+
+        <label class="feld" id="feld-vereinbarungen" hidden>
+          <span>Vereinbarungen</span>
+          <textarea id="coaching-vereinbarungen" rows="3"
+                    placeholder="Was ist bis zum nächsten Gespräch verabredet?"></textarea>
+        </label>
+
+        <div class="zwei-spalten">
+          <label class="feld"><span>Gilt ab</span>
+            <input type="date" id="coaching-gueltigab"></label>
+          <label class="feld haken-feld">
+            <input type="checkbox" id="coaching-ausweis">
+            <span>Ausweis zur neuen Lernstufe wurde überreicht</span></label>
+        </div>
+
+        <p class="fehler" id="coaching-fehler" role="alert" hidden></p>
+        <div class="zwei-spalten">
+          <button type="submit" class="knopf-gross">Gespräch festhalten</button>
+          <button type="button" class="knopf-leise" id="coaching-drucken">Bogen drucken</button>
+        </div>
+      </form>
+    </section>
+
     <!-- Fremdeinschätzung -->
     <section class="ansicht" id="ansicht-fremd" hidden>
       <p class="lang">Ein Kriterium für die ganze Klasse – so bleibt der Maßstab gleich.

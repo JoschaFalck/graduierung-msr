@@ -17,11 +17,12 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     schueler.js
     stil.css
     manifest.webmanifest     macht die Seite auf dem iPad installierbar
-  lehrkraft/                 ENTWURF: Datei anlegen/öffnen, Übersicht, Einsammeln, Fremdeinschätzung
+  lehrkraft/                 Datei anlegen/öffnen, Übersicht, Einsammeln, Fremdeinschätzung,
+                             Verlauf je Kind, Coaching-Gespräch mit Bogen und Druck
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                57 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                72 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -119,13 +120,31 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
   immer dieselbe Klasse.
 - **Schüler:** `…/schueler/#test` blendet eine Leiste mit Stufenwechsel und Profil-Zurücksetzen ein.
 
+## Layout
+
+Beide Anwendungen sind für das **iPad im Querformat** ausgelegt. Ab 48 rem Breite steht die
+Skala neben dem Kriterium statt darunter (halbiert die Höhe), die Erklärungen liegen
+nebeneinander, und die Ausweislisten werden zweispaltig. Ab 68 rem stehen die Kriterien selbst
+zweispaltig. In der Lehrkraft-Anwendung wird die Klassenliste ab 60 rem zwei-, ab 78 rem
+dreispaltig -- die Erfassung bleibt bewusst einspaltig, damit der Blick beim Durchgehen ruhig bleibt.
+
+## Der Coaching-Bogen
+
+Eine Besonderheit steckt darin: Das Kind kreuzt **Einzelkriterien** an, die Lehrkraft die
+**Sammelzeilen**. Damit beides nebeneinanderstehen kann, verdichtet `zeilenwert()` die
+Selbstsicht auf die Zeile -- nach der Regel *der schlechteste Einzelwert zählt*.
+„Ich erfülle die Verantwortlichkeiten im Hafen" ist eben nicht erfüllt, sobald eine davon fehlt.
+Weicht die verdichtete Selbstsicht von der Fremdsicht ab, wird das Feld gelb hinterlegt --
+das ist der Gesprächsstoff.
+
+`Bogen drucken` nutzt die Druckansicht des Browsers: Leisten und Navigation verschwinden,
+und unter das Formular kommt eine Unterschriftenzeile.
+
 ## Noch offen in der Lehrkraft-Anwendung
 
-Der Entwurf deckt den Zwei-Wochen-Rhythmus ab. Es fehlen:
-
-- **Coaching-Bogen** (S und L über vier Zeiträume nebeneinander, Abweichungen hervorgehoben)
-  und das **Coaching-Protokoll** mit Hoch-/Rückstufung
-- **Druckausgaben**: Coaching-Bogen im gewohnten Layout, personalisierter Ausweis
+- **Personalisierter Ausweis zum Drucken** (die Ausweiskarte mit Namen des Kindes)
+- **Unterschriften**: Der gedruckte Bogen hat eine Unterschriftenzeile, in der Anwendung
+  selbst wird nichts signiert -- unterschrieben wird auf Papier
 - **Verlaufsansicht** je Kind (Stufenband über das Schuljahr)
 - **Wochen-Schnappschüsse** der Klassendatei (siehe KONZEPT.md Abschnitt 6)
 - Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)

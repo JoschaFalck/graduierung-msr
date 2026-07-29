@@ -3,23 +3,27 @@
 // erzeugt immer dieselbe Klasse, sonst sieht man bei jedem Öffnen etwas anderes.
 
 import { kriterienDerStufe, bewertungszeilen } from './katalog.js';
-import { klasseAnlegen, lernendeAnlegen, einschaetzungSetzen } from './klassendatei.js';
+import {
+  klasseAnlegen, lernendeAnlegen, einschaetzungSetzen, coachingEintragen,
+} from './klassendatei.js';
 
+// Startstufe und der Weg durchs Schuljahr: was bei jedem Coaching passiert.
+// 'hoch' | 'gleich' | 'runter' -- drei Coachings = zwölf Zeiträume.
 const KINDER = [
-  ['Ayla Kilic', 'freie-see'],
-  ['Ben Hartmann', 'ankerplatz'],
-  ['Clara Weiß', 'boie'],
-  ['David Nowak', 'hafen'],
-  ['Elif Yildiz', 'ankerplatz'],
-  ['Finn Bergmann', 'hafen'],
-  ['Greta Sommer', 'boie'],
-  ['Hamed Rahimi', 'ankerplatz'],
-  ['Ida Kraus', 'hafen'],
-  ['Jonas Peters', 'ankerplatz'],
-  ['Klara Möller', 'boie'],
-  ['Luca Fischer', 'hafen'],
-  ['Marie Schuster', 'ankerplatz'],
-  ['Nils Behrens', 'hafen'],
+  ['Ayla Kilic',     'ankerplatz', ['hoch', 'hoch', 'gleich']],
+  ['Ben Hartmann',   'hafen',      ['hoch', 'gleich', 'hoch']],
+  ['Clara Weiß',     'ankerplatz', ['gleich', 'hoch', 'gleich']],
+  ['David Nowak',    'hafen',      ['gleich', 'gleich', 'hoch']],
+  ['Elif Yildiz',    'boie',       ['gleich', 'runter', 'hoch']],
+  ['Finn Bergmann',  'hafen',      ['gleich', 'hoch', 'runter']],
+  ['Greta Sommer',   'boie',       ['hoch', 'gleich', 'gleich']],
+  ['Hamed Rahimi',   'hafen',      ['hoch', 'gleich', 'gleich']],
+  ['Ida Kraus',      'ankerplatz', ['hoch', 'gleich', 'runter']],
+  ['Jonas Peters',   'hafen',      ['gleich', 'gleich', 'gleich']],
+  ['Klara Möller',   'ankerplatz', ['hoch', 'hoch', 'gleich']],
+  ['Luca Fischer',   'hafen',      ['gleich', 'hoch', 'gleich']],
+  ['Marie Schuster', 'ankerplatz', ['gleich', 'gleich', 'hoch']],
+  ['Nils Behrens',   'hafen',      ['gleich', 'gleich', 'gleich']],
 ];
 
 const BELEGE = [
@@ -29,9 +33,21 @@ const BELEGE = [
   'Ich habe meine Wochenziele ins Logbuch geschrieben und abgehakt.',
   'Ich habe den Klassendienst übernommen, obwohl ich nicht dran war.',
   'Ich war zweimal zu spät mit den Aufgaben, das will ich ändern.',
+  'Ich habe in Mathe zweimal nachgefragt, statt einfach abzuschreiben.',
 ];
 
-/** Kleiner Pseudozufall mit festem Startwert -- reproduzierbar. */
+const BEGRUENDUNGEN = {
+  gleich: 'Die Verantwortung wird überwiegend erfüllt, bei den Terminen fehlt noch Verlässlichkeit. Wir schauen in acht Wochen erneut.',
+  hoch: '',
+  runter: '',
+};
+
+const VEREINBARUNGEN = [
+  'Ich schreibe alle Termine sofort ins Logbuch und zeige es freitags vor.',
+  'Ich melde mich in Inputphasen, statt dazwischenzurufen.',
+  'Ich räume mein Fach jeden Freitag auf.',
+];
+
 function wuerfel(startwert) {
   let zustand = startwert;
   return () => {
@@ -41,11 +57,14 @@ function wuerfel(startwert) {
 }
 
 /**
- * Baut eine vollständige Beispielklasse mit Selbst- und Fremdeinschätzungen
- * über mehrere Zeiträume -- inklusive gewollter Abweichungen zwischen beidem,
- * weil genau die im Coaching-Gespräch der interessante Teil sind.
+ * Baut eine Beispielklasse über ein halbes Schuljahr: zwölf Zeiträume,
+ * drei Coaching-Gespräche mit Hoch- und Rückstufungen. Damit lässt sich der
+ * Entwicklungsverlauf ansehen, nicht nur ein einzelner Zeitraum.
  */
-export function beispielklasse(katalog, zeitraeume = 4) {
+export function beispielklasse(katalog, bloecke = 3) {
+  const jeBlock = 4;
+  const zeitraeume = bloecke * jeBlock;
+
   const datei = klasseAnlegen({
     klasse: '8b (Beispiel)',
     schuljahr: '2026/27',
@@ -58,37 +77,59 @@ export function beispielklasse(katalog, zeitraeume = 4) {
   const zufall = wuerfel(4711);
   const werte = katalog.skala.map((s) => s.id);
 
-  for (const kind of datei.lernende) {
-    // Tendenz je Kind: manche liegen durchgehend gut, andere schwanken
+  for (const [name, , weg] of KINDER) {
+    const kind = datei.lernende.find((l) => l.name === name);
     const tendenz = zufall();
 
-    for (let z = 1; z <= zeitraeume; z++) {
-      // ein Kind gibt in einem Zeitraum nichts ab -- die Fehlliste soll etwas zeigen
-      const abwesend = kind.name === 'Nils Behrens' && z === zeitraeume;
+    for (let block = 0; block < bloecke; block++) {
+      // Einschätzungen dieses Blocks -- immer gegen die Stufe, die damals galt
+      for (let i = 1; i <= jeBlock; i++) {
+        const z = block * jeBlock + i;
+        const letzterZeitraum = z === zeitraeume;
 
-      if (!abwesend) {
-        einschaetzungSetzen(datei, {
-          schuelerId: kind.id,
-          zeitraum: z,
-          quelle: 'selbst',
-          stufe: kind.stufe,
-          bewertungen: bewertungenBauen(kriterienDerStufe(katalog, kind.stufe).map((k) => k.id),
-            werte, zufall, tendenz + 0.15),
-          beleg: {
-            kriteriumId: kriterienDerStufe(katalog, kind.stufe)[0].id,
-            text: BELEGE[Math.floor(zufall() * BELEGE.length)],
-          },
-        });
+        // ein Kind gibt zuletzt nichts ab, damit die Fehlliste etwas zeigt
+        if (!(kind.name === 'Nils Behrens' && letzterZeitraum)) {
+          einschaetzungSetzen(datei, {
+            schuelerId: kind.id, zeitraum: z, quelle: 'selbst', stufe: kind.stufe,
+            bewertungen: bewertungenBauen(
+              kriterienDerStufe(katalog, kind.stufe).map((k) => k.id),
+              werte, zufall, tendenz + 0.15 + block * 0.04
+            ),
+            beleg: {
+              kriteriumId: kriterienDerStufe(katalog, kind.stufe)[0].id,
+              text: BELEGE[Math.floor(zufall() * BELEGE.length)],
+            },
+          });
+        }
+
+        // die letzte Fremdeinschätzung bleibt offen -- so sieht man den
+        // Unterschied zwischen „vollständig“ und „fehlt noch“
+        if (!letzterZeitraum) {
+          einschaetzungSetzen(datei, {
+            schuelerId: kind.id, zeitraum: z, quelle: 'fremd', stufe: kind.stufe,
+            bewertungen: bewertungenBauen(
+              bewertungszeilen(katalog, kind.stufe).map((r) => r.id),
+              werte, zufall, tendenz - 0.1 + block * 0.04
+            ),
+          });
+        }
       }
 
-      // Fremdeinschätzung auf den Sammelzeilen, etwas strenger als die Selbstsicht
-      if (z < zeitraeume) {
-        einschaetzungSetzen(datei, {
+      // Coaching am Ende des Blocks -- das letzte steht noch aus
+      const entscheidung = weg[block];
+      if (block < bloecke - 1) {
+        const zeitraum = (block + 1) * jeBlock;
+        coachingEintragen(datei, {
           schuelerId: kind.id,
-          zeitraum: z,
-          quelle: 'fremd',
-          bewertungen: bewertungenBauen(bewertungszeilen(katalog, kind.stufe).map((r) => r.id),
-            werte, zufall, tendenz - 0.1),
+          zeitraum,
+          entscheidung,
+          datum: datumFuerZeitraum(datei, zeitraum),
+          gueltigAb: datumFuerZeitraum(datei, zeitraum),
+          begruendung: entscheidung === 'gleich' ? BEGRUENDUNGEN.gleich : '',
+          vereinbarungen:
+            entscheidung === 'runter' ? VEREINBARUNGEN[Math.floor(zufall() * VEREINBARUNGEN.length)] : '',
+          gruende: entscheidung === 'runter' ? rueckstufungsauswahl(katalog, kind.stufe, zufall) : [],
+          ausweisUebergeben: entscheidung !== 'gleich',
         });
       }
     }
@@ -96,6 +137,14 @@ export function beispielklasse(katalog, zeitraeume = 4) {
 
   datei.beispiel = true;
   return datei;
+}
+
+/** Zwei plausible Gründe aus dem Katalog, damit der Rückstufungsbogen gefüllt ist. */
+function rueckstufungsauswahl(katalog, stufenId, zufall) {
+  const moeglich = kriterienDerStufe(katalog, stufenId).map((k) => k.id);
+  const erste = Math.floor(zufall() * moeglich.length);
+  const zweite = (erste + 1 + Math.floor(zufall() * 2)) % moeglich.length;
+  return [...new Set([moeglich[erste], moeglich[zweite]])];
 }
 
 function bewertungenBauen(ids, werte, zufall, guete) {
@@ -107,9 +156,14 @@ function bewertungenBauen(ids, werte, zufall, guete) {
   return gebaut;
 }
 
-/** Startdatum so wählen, dass heute im gewünschten Zeitraum liegt. */
 function startvorZeitraeumen(anzahl) {
   const start = new Date();
   start.setDate(start.getDate() - (anzahl - 1) * 14 - 3);
   return start.toISOString().slice(0, 10);
+}
+
+function datumFuerZeitraum(datei, zeitraum) {
+  const d = new Date(`${datei.zyklus.start}T00:00:00`);
+  d.setDate(d.getDate() + zeitraum * datei.zyklus.tageJeZeitraum - 1);
+  return d.toISOString().slice(0, 10);
 }
