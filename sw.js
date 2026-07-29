@@ -7,7 +7,7 @@
 // (Cache zuerst wäre schneller, würde aber alte Fassungen auf den iPads festhalten --
 // bei 25 Geräten, die man nicht einzeln entstauben kann, ein schlechter Tausch.)
 
-const FASSUNG = 'graduierung-v5';
+const FASSUNG = 'graduierung-v6';
 
 const VORRAT = [
   './',

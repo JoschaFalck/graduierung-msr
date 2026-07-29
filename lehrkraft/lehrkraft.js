@@ -15,6 +15,7 @@ let datei = null;      // die entschlüsselte Klassendatei
 let passwort = null;   // nur im Arbeitsspeicher, nie gespeichert
 let griff = null;      // FileSystemFileHandle, wo der Browser das kann
 let zeileAktiv = null; // gewählte Zeile der Fremdeinschätzung
+let offeneImporte = []; // Namen, die noch zugeordnet werden müssen
 
 const kannDirektSchreiben = 'showSaveFilePicker' in window;
 
@@ -80,6 +81,7 @@ async function klasseAnlegen() {
   meldung.hidden = true;
 
   datei = kd.klasseAnlegen({ klasse, schuljahr, zyklusStart: start, katalogVersion: katalog.version });
+  kd.lernendeAusListe(datei, $('#neu-namen').value, katalog.stufen[0].id);
   passwort = pw;
   griff = null;
   if (await speichern({ neuerOrt: true })) anwendungZeigen();
@@ -188,11 +190,13 @@ function alesZeichnen() {
   const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum).length;
 
   $('#leiste-zeitraum').textContent = `Zeitraum ${zeitraum}`;
-  $('#leiste-status').textContent = kd.coachingFaellig(datei, zeitraum)
-    ? 'Coaching-Gespräche stehen an'
-    : fehlen
-      ? `${fehlen} Selbsteinschätzung${fehlen === 1 ? '' : 'en'} fehlt noch`
-      : 'alle Selbsteinschätzungen da';
+  $('#leiste-status').textContent = !datei.lernende.length
+    ? 'noch keine Kinder in der Liste'
+    : kd.coachingFaellig(datei, zeitraum)
+      ? 'Coaching-Gespräche stehen an'
+      : fehlen
+        ? `${fehlen} Selbsteinschätzung${fehlen === 1 ? '' : 'en'} fehlt noch`
+        : 'alle Selbsteinschätzungen da';
 
   klassenlisteZeichnen();
   zeilenwahlZeichnen();
@@ -281,14 +285,14 @@ async function dateienLesen(dateien) {
 }
 
 function importErgebnisZeichnen(ergebnisse) {
-  const uebernommen = ergebnisse.filter((e) => e.art === 'neu' || e.art === 'ersetzt').length;
+  // unbekannte Namen wandern in die Warteschlange und werden dort entschieden
+  for (const e of ergebnisse.filter((e) => e.art === 'unbekannt')) offeneImporte.push(e);
 
+  const erledigt = ergebnisse.filter((e) => e.art === 'neu' || e.art === 'ersetzt');
   const zeilen = ergebnisse
+    .filter((e) => e.art !== 'unbekannt')
     .map((e) => {
       if (e.art === 'fehler') return meldung('fehler', e.name, e.grund);
-      if (e.art === 'unbekannt') {
-        return meldung('fehler', e.name, 'Kein Kind mit diesem Namen in der Klasse.');
-      }
       const zusatz = e.stufeWeicht
         ? `hat ${stufe(katalog, e.gemeldeteStufe).name} angegeben, geführt ist ${stufe(katalog, e.gefuehrteStufe).name}`
         : `Zeitraum ${e.zeitraum}${e.art === 'ersetzt' ? ' · frühere Abgabe ersetzt' : ''}`;
@@ -296,11 +300,15 @@ function importErgebnisZeichnen(ergebnisse) {
     })
     .join('');
 
-  $('#import-ergebnis').innerHTML = zeilen
-    ? `<h2>${uebernommen} übernommen</h2><div class="meldungen">${zeilen}</div>
-       <p class="hinweis">Denk daran, den Downloads-Ordner zu leeren –
-          die empfangenen Dateien sind unverschlüsselt.</p>`
-    : '';
+  $('#import-ergebnis').innerHTML =
+    (offeneImporte.length ? zuordnungZeichnen() : '') +
+    (zeilen
+      ? `<h2>${erledigt.length} übernommen</h2><div class="meldungen">${zeilen}</div>
+         <p class="hinweis">Denk daran, den Downloads-Ordner zu leeren –
+            die empfangenen Dateien sind unverschlüsselt.</p>`
+      : '');
+
+  zuordnungVerdrahten();
 
   const fehlen = kd.fehlendeSelbsteinschaetzungen(datei);
   $('#import-fehlliste').innerHTML = fehlen.length
@@ -312,6 +320,87 @@ function importErgebnisZeichnen(ergebnisse) {
 
 function meldung(art, name, text) {
   return `<p class="meldung ${art}"><strong>${escapen(name)}</strong>${text ? ` – ${escapen(text)}` : ''}</p>`;
+}
+
+/**
+ * Namen, die es in der Klasse noch nicht gibt. Bewusst kein stilles Anlegen:
+ * Die Kinder tippen ihren Namen alle zwei Wochen neu, und aus „Lea Müßig“ /
+ * „Lea Müssig“ würden sonst zwei Kinder mit je halbem Verlauf.
+ */
+function zuordnungZeichnen() {
+  const karten = offeneImporte
+    .map((offen, i) => {
+      const aehnlich = kd.aehnlicheNamen(datei, offen.name);
+      const auswahl = aehnlich.length
+        ? `<label class="zuordnen-zeile">Gehört zu
+             <select data-waehlen="${i}">
+               ${aehnlich.map((k) => `<option value="${k.id}">${escapen(k.name)}</option>`).join('')}
+             </select>
+             <button type="button" class="knopf-klein" data-zuordnen="${i}">Zuordnen</button>
+           </label>`
+        : '';
+      return `
+        <div class="zuordnen">
+          <p class="zuordnen-name"><strong>${escapen(offen.name)}</strong>
+            ${aehnlich.length ? '– kenne ich so noch nicht' : '– neu in der Klasse?'}</p>
+          ${auswahl}
+          <button type="button" class="knopf-klein" data-anlegen="${i}">Als neues Kind anlegen</button>
+          <button type="button" class="knopf-klein leise" data-verwerfen="${i}">Verwerfen</button>
+        </div>`;
+    })
+    .join('');
+
+  // Beim Aufbau einer neuen Klasse sind alle Namen unbekannt -- dann wäre
+  // Einzelklicken für 25 Kinder Unfug. Der Sammelknopf erscheint nur, wenn
+  // keiner der Namen einem vorhandenen ähnelt, also nichts zu entscheiden ist.
+  const alleNeu = offeneImporte.every((o) => !kd.aehnlicheNamen(datei, o.name).length);
+  const sammel =
+    offeneImporte.length > 1 && alleNeu
+      ? `<button type="button" class="knopf-klein sammel" id="alle-anlegen">
+           Alle ${offeneImporte.length} als neue Kinder anlegen</button>`
+      : '';
+
+  return `<h2>Bitte entscheiden (${offeneImporte.length})</h2>${sammel}${karten}`;
+}
+
+function zuordnungVerdrahten() {
+  const bereich = $('#import-ergebnis');
+
+  bereich.querySelector('#alle-anlegen')?.addEventListener('click', () => {
+    for (const offen of offeneImporte) kd.uebergabeAlsNeuesKind(datei, offen.uebergabe);
+    offeneImporte = [];
+    merken();
+    alesZeichnen();
+    importErgebnisZeichnen([]);
+  });
+
+  for (const knopf of bereich.querySelectorAll('[data-anlegen]')) {
+    knopf.addEventListener('click', () => {
+      const offen = offeneImporte[Number(knopf.dataset.anlegen)];
+      kd.uebergabeAlsNeuesKind(datei, offen.uebergabe);
+      abschliessen(Number(knopf.dataset.anlegen));
+    });
+  }
+
+  for (const knopf of bereich.querySelectorAll('[data-zuordnen]')) {
+    knopf.addEventListener('click', () => {
+      const i = Number(knopf.dataset.zuordnen);
+      const gewaehlt = bereich.querySelector(`[data-waehlen="${i}"]`).value;
+      kd.uebergabeZuordnen(datei, offeneImporte[i].uebergabe, gewaehlt);
+      abschliessen(i);
+    });
+  }
+
+  for (const knopf of bereich.querySelectorAll('[data-verwerfen]')) {
+    knopf.addEventListener('click', () => abschliessen(Number(knopf.dataset.verwerfen)));
+  }
+}
+
+function abschliessen(nummer) {
+  offeneImporte.splice(nummer, 1);
+  merken();
+  alesZeichnen();
+  importErgebnisZeichnen([]);
 }
 
 // ---------------------------------------------------------------- Fremdeinschätzung

@@ -47,10 +47,53 @@ export function lernendeAnlegen(datei, name, stufe) {
   return eintrag;
 }
 
+/** Legt mehrere Kinder auf einmal an (eine Zeile je Name). */
+export function lernendeAusListe(datei, text, stufe) {
+  const angelegt = [];
+  for (const zeile of text.split('\n')) {
+    const name = zeile.trim();
+    if (!name || lernendeSuchen(datei, name)) continue;
+    angelegt.push(lernendeAnlegen(datei, name, stufe));
+  }
+  return angelegt;
+}
+
+const normal = (t) => t.trim().toLowerCase().replace(/\s+/g, ' ');
+
 /** Findet ein Kind über den Namen -- tolerant gegenüber Schreibweise. */
 export function lernendeSuchen(datei, name) {
-  const norm = (t) => t.trim().toLowerCase().replace(/\s+/g, ' ');
-  return datei.lernende.find((l) => norm(l.name) === norm(name)) ?? null;
+  return datei.lernende.find((l) => normal(l.name) === normal(name)) ?? null;
+}
+
+/**
+ * Vorhandene Namen, die dem gesuchten ähneln -- fängt Tippfehler ab,
+ * bevor daraus ein zweites Kind mit halbem Verlauf wird.
+ */
+export function aehnlicheNamen(datei, name, hoechstabstand = 3) {
+  const gesucht = normal(name);
+  return datei.lernende
+    .map((l) => ({ kind: l, abstand: abstand(normal(l.name), gesucht) }))
+    .filter((t) => t.abstand <= hoechstabstand)
+    .sort((a, b) => a.abstand - b.abstand)
+    .map((t) => t.kind);
+}
+
+/** Levenshtein-Abstand, zeilenweise -- reicht für Namenslängen völlig. */
+function abstand(a, b) {
+  if (a === b) return 0;
+  let vorige = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const aktuelle = [i];
+    for (let j = 1; j <= b.length; j++) {
+      aktuelle[j] = Math.min(
+        vorige[j] + 1,
+        aktuelle[j - 1] + 1,
+        vorige[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    vorige = aktuelle;
+  }
+  return vorige[b.length];
 }
 
 export function stufeSetzen(datei, schuelerId, stufe) {
@@ -142,6 +185,25 @@ export function selbsteinschaetzungUebernehmen(datei, uebergabe) {
     gemeldeteStufe: uebergabe.stufe,
     gefuehrteStufe: kind.stufe,
   };
+}
+
+/**
+ * Legt aus einer Übergabe ein neues Kind an und übernimmt sie.
+ * Die vom Kind gemeldete Stufe ist beim Erstanlegen die beste Auskunft, die es gibt.
+ */
+export function uebergabeAlsNeuesKind(datei, uebergabe) {
+  lernendeAnlegen(datei, uebergabe.schueler.name, uebergabe.stufe);
+  return selbsteinschaetzungUebernehmen(datei, uebergabe);
+}
+
+/** Ordnet eine Übergabe einem bereits vorhandenen Kind zu (Tippfehler im Namen). */
+export function uebergabeZuordnen(datei, uebergabe, schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) throw new Error('Unbekannte Person.');
+  return selbsteinschaetzungUebernehmen(datei, {
+    ...uebergabe,
+    schueler: { ...uebergabe.schueler, name: kind.name },
+  });
 }
 
 /** Wer hat im laufenden Zeitraum noch nicht abgegeben? */

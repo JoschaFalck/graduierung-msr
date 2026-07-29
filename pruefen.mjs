@@ -287,4 +287,57 @@ test('Passphrase-Güte', () => {
   assert.equal(tresor.passphraseGuete('Seepferdchen-42!').stufe, 'gut');
 });
 
+
+console.log('\nKlassenaufbau aus Importen');
+const datei2 = kd.klasseAnlegen({ klasse: '7b', schuljahr: '2026/27',
+  zyklusStart: '2026-09-14', katalogVersion: katalog.version });
+
+test('Namensliste legt mehrere auf einmal an', () => {
+  const angelegt = kd.lernendeAusListe(datei2, ' Mia Roth \n\nTom Berg\n Mia Roth \n', 'hafen');
+  assert.equal(angelegt.length, 2, 'Doppelter Name darf nicht zweimal angelegt werden');
+  assert.deepEqual(datei2.lernende.map(l => l.name), ['Mia Roth', 'Tom Berg']);
+});
+
+test('ähnliche Namen werden gefunden', () => {
+  assert.deepEqual(kd.aehnlicheNamen(datei2, 'Mia Rot').map(l => l.name), ['Mia Roth']);
+  assert.deepEqual(kd.aehnlicheNamen(datei2, 'mia  roth').map(l => l.name), ['Mia Roth']);
+  assert.deepEqual(kd.aehnlicheNamen(datei2, 'Zeynep Kaya'), []);
+});
+
+const fremdeUebergabe = uebergabeErzeugen({
+  schueler: { name: 'Mia Rot', klasse: '7b' }, stufe: 'hafen',
+  bewertungen: Object.fromEntries(kriterienDerStufe(katalog, 'hafen').map(k => [k.id, 'erreicht'])),
+  beleg: { kriteriumId: 'H1', text: 'Ich habe anderen geholfen.' },
+  katalogVersion: katalog.version,
+});
+
+test('Tippfehler-Name wird nicht still angelegt', () => {
+  const r = kd.selbsteinschaetzungUebernehmen(datei2, fremdeUebergabe);
+  assert.equal(r.art, 'unbekannt');
+  assert.equal(datei2.lernende.length, 2);
+});
+
+test('Zuordnen schreibt auf das vorhandene Kind', () => {
+  const mia = kd.lernendeSuchen(datei2, 'Mia Roth');
+  const r = kd.uebergabeZuordnen(datei2, fremdeUebergabe, mia.id);
+  assert.equal(r.art, 'neu');
+  assert.equal(r.name, 'Mia Roth');
+  assert.equal(datei2.lernende.length, 2, 'Es darf kein zweites Kind entstanden sein');
+  assert.ok(kd.einschaetzung(datei2, mia.id, 1, 'selbst'));
+});
+
+test('bewusstes Anlegen erzeugt Kind samt Einschätzung', () => {
+  const neue = uebergabeErzeugen({
+    schueler: { name: 'Zeynep Kaya', klasse: '7b' }, stufe: 'boie',
+    bewertungen: Object.fromEntries(kriterienDerStufe(katalog, 'boie').map(k => [k.id, 'teilweise'])),
+    beleg: { kriteriumId: 'B1', text: 'Ich habe mein Ziel erreicht.' },
+    katalogVersion: katalog.version,
+  });
+  const r = kd.uebergabeAlsNeuesKind(datei2, neue);
+  assert.equal(r.art, 'neu');
+  const kind = kd.lernendeSuchen(datei2, 'Zeynep Kaya');
+  assert.equal(kind.stufe, 'boie', 'gemeldete Stufe wird übernommen');
+  assert.ok(kd.einschaetzung(datei2, kind.id, 1, 'selbst'));
+});
+
 console.log(`\n${geprueft} Prüfungen bestanden.\n`);

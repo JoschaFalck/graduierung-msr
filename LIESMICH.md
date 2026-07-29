@@ -20,7 +20,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                52 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                57 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -117,4 +117,10 @@ Der Entwurf deckt den Zwei-Wochen-Rhythmus ab. Es fehlen:
 - **Druckausgaben**: Coaching-Bogen im gewohnten Layout, personalisierter Ausweis
 - **Verlaufsansicht** je Kind (Stufenband über das Schuljahr)
 - **Wochen-Schnappschüsse** der Klassendatei (siehe KONZEPT.md Abschnitt 6)
-- Klassenliste bequem anlegen (aktuell einzeln über einen Eingabedialog)
+- Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)
+
+**Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind)
+oder aus den ersten Selbsteinschätzungen. Unbekannte Namen werden nie still angelegt --
+sie landen unter „Bitte entscheiden" mit den Möglichkeiten *neu anlegen*, *zuordnen*
+(mit Vorschlag ähnlicher Namen gegen Tippfehler) oder *verwerfen*. Beim Erstaufbau,
+wenn alle Namen neu sind, gibt es einen Sammelknopf für die ganze Klasse.
