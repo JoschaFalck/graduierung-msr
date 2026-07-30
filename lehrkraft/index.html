@@ -183,10 +183,45 @@
 
     <!-- Fremdeinschätzung -->
     <section class="ansicht" id="ansicht-fremd" hidden>
-      <p class="lang">Ein Kriterium für die ganze Klasse – so bleibt der Maßstab gleich.
-        Geerbte Stufen stehen als Sammelzeile.</p>
-      <div class="zeilenwahl" id="zeilenwahl"></div>
+      <div class="moduswahl" role="group" aria-label="Erfassungsart">
+        <button type="button" class="modus aktiv" data-modus="kind">Nach Kind</button>
+        <button type="button" class="modus" data-modus="kriterium">Nach Kriterium</button>
+      </div>
+      <p class="lang" id="fremd-hinweis"></p>
+      <div class="wahlleiste" id="fremd-wahl"></div>
       <div id="fremd-raster"></div>
+    </section>
+
+    <!-- Datei -->
+    <section class="ansicht" id="ansicht-datei" hidden>
+      <p class="lang">Alle Daten dieser Klasse stecken in einer einzigen verschlüsselten Datei.
+        Ohne dein Passwort ist sie für niemanden lesbar – auch nicht für dich.</p>
+
+      <div class="kachelreihe">
+        <div class="kachel">
+          <h3>Stand sichern</h3>
+          <p>Schreibt den aktuellen Stand sofort zurück. Passiert sonst automatisch
+            kurz nach jeder Änderung.</p>
+          <button type="button" class="knopf-klein" id="datei-sichern">Jetzt sichern</button>
+        </div>
+
+        <div class="kachel">
+          <h3>Kopie ablegen</h3>
+          <p>Speichert den Stand zusätzlich an einem Ort deiner Wahl – für die
+            Sicherung auf einem Stick oder in deinem Backup.</p>
+          <button type="button" class="knopf-klein" id="datei-kopie">Kopie speichern unter …</button>
+        </div>
+
+        <div class="kachel">
+          <h3>Klasse schließen</h3>
+          <p>Sichert und schließt die Datei. Danach ist wieder das Passwort nötig –
+            sinnvoll, wenn du den Rechner weggibst.</p>
+          <button type="button" class="knopf-klein" id="datei-schliessen">Sichern und schließen</button>
+        </div>
+      </div>
+
+      <h2>Diese Klasse</h2>
+      <dl class="angaben" id="datei-angaben"></dl>
     </section>
   </main>
 
@@ -194,6 +229,7 @@
     <button type="button" data-ansicht="uebersicht" class="aktiv">Übersicht</button>
     <button type="button" data-ansicht="import">Einsammeln</button>
     <button type="button" data-ansicht="fremd">Fremdeinschätzung</button>
+    <button type="button" data-ansicht="datei">Datei</button>
   </nav>
 </div>
 

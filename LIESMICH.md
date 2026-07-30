@@ -17,7 +17,8 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     schueler.js
     stil.css
     manifest.webmanifest     macht die Seite auf dem iPad installierbar
-  lehrkraft/                 Datei anlegen/öffnen, Übersicht, Einsammeln, Fremdeinschätzung,
+  lehrkraft/                 Datei anlegen/öffnen/sichern, Übersicht, Einsammeln,
+                             Fremdeinschätzung (nach Kind oder nach Kriterium),
                              Verlauf je Kind, Coaching-Gespräch mit Bogen und Druck
     index.html
     lehrkraft.js
@@ -128,6 +129,23 @@ nebeneinander, und die Ausweislisten werden zweispaltig. Ab 68 rem stehen die Kr
 zweispaltig. In der Lehrkraft-Anwendung wird die Klassenliste ab 60 rem zwei-, ab 78 rem
 dreispaltig -- die Erfassung bleibt bewusst einspaltig, damit der Blick beim Durchgehen ruhig bleibt.
 
+## Fremdeinschätzung: zwei Wege
+
+- **Nach Kind** (Standard): Kind auswählen, darunter erscheinen alle Kriterien seiner Stufe.
+  Der Weg für die Vorbereitung eines Gesprächs.
+- **Nach Kriterium**: ein Kriterium, alle Kinder, die es betrifft. Der Weg für den
+  Klassendurchgang -- der Maßstab bleibt über die Klasse gleich.
+
+Beide zeigen an jedem Eintrag den Stand (`3/5` oder ✓), damit nichts unbemerkt offen bleibt.
+
+## Datei sichern
+
+Eigener Bereich in der Navigation: **Jetzt sichern** (schreibt sofort zurück, passiert sonst
+automatisch 0,8 s nach der letzten Änderung), **Kopie speichern unter …** (zusätzliche Ablage
+für Stick oder Backup, mit Datum im Dateinamen -- die Arbeitsdatei bleibt, wo sie ist) und
+**Sichern und schließen**. Dazu die Kennzahlen der Klasse und wo die Datei liegt.
+Im Beispielmodus sind Sichern und Kopie gesperrt.
+
 ## Der Coaching-Bogen
 
 Eine Besonderheit steckt darin: Das Kind kreuzt **Einzelkriterien** an, die Lehrkraft die
@@ -145,8 +163,8 @@ und unter das Formular kommt eine Unterschriftenzeile.
 - **Personalisierter Ausweis zum Drucken** (die Ausweiskarte mit Namen des Kindes)
 - **Unterschriften**: Der gedruckte Bogen hat eine Unterschriftenzeile, in der Anwendung
   selbst wird nichts signiert -- unterschrieben wird auf Papier
-- **Verlaufsansicht** je Kind (Stufenband über das Schuljahr)
-- **Wochen-Schnappschüsse** der Klassendatei (siehe KONZEPT.md Abschnitt 6)
+- **Automatische Wochen-Schnappschüsse** (siehe KONZEPT.md Abschnitt 6) -- „Kopie speichern
+  unter …" gibt es, ein automatischer Rhythmus fehlt noch
 - Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)
 
 **Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind)

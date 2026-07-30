@@ -36,6 +36,7 @@ async function starten() {
   navigationVerdrahten();
   importVerdrahten();
   klassenlisteVerdrahten(); // hängt am Container, überlebt jedes Neuzeichnen
+  fremdVerdrahten();
 
   $('#coaching-zurueck').addEventListener('click', () => kindZeigen(coachingKind.id));
   $('#coaching-drucken').addEventListener('click', () => window.print());
@@ -44,6 +45,7 @@ async function starten() {
     coachingSpeichern();
   });
   $('#kind-anlegen').addEventListener('click', kindAnlegen);
+  dateiVerdrahten();
   $('#kind-zurueck').addEventListener('click', () => {
     document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
   });
@@ -183,10 +185,7 @@ async function speichern({ neuerOrt = false } = {}) {
     }
   }
 
-  const adresse = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
-  const verweis = Object.assign(document.createElement('a'), { href: adresse, download: name });
-  document.body.append(verweis); verweis.click(); verweis.remove();
-  setTimeout(() => URL.revokeObjectURL(adresse), 1000);
+  herunterladen(bytes, name);
   gesichertZeigen(true);
   return true;
 }
@@ -203,6 +202,93 @@ function gesichertZeigen(fertig) {
   const feld = $('#gesichert');
   feld.textContent = fertig ? 'gesichert' : 'ändert …';
   feld.dataset.zustand = fertig ? 'fertig' : 'offen';
+}
+
+// ---------------------------------------------------------------- Datei-Bereich
+
+function dateiVerdrahten() {
+  $('#datei-sichern').addEventListener('click', async () => {
+    clearTimeout(sicherungLaeuft);
+    if (await speichern()) meldungKurz('#datei-sichern', 'Gesichert ✓');
+  });
+
+  // Bewusst ohne den gemerkten Griff: die Kopie soll woanders liegen,
+  // die Arbeitsdatei bleibt, wo sie ist.
+  $('#datei-kopie').addEventListener('click', async () => {
+    if (!datei || datei.beispiel) return;
+    const bytes = await verschluesseln(datei, passwort);
+    const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}-${heuteKurz()}.gradu`;
+
+    if (kannDirektSchreiben) {
+      try {
+        const ziel = await window.showSaveFilePicker({
+          suggestedName: name,
+          types: [{ description: 'Klassendatei', accept: { 'application/octet-stream': ['.gradu'] } }],
+        });
+        const strom = await ziel.createWritable();
+        await strom.write(bytes);
+        await strom.close();
+        meldungKurz('#datei-kopie', 'Kopie abgelegt ✓');
+        return;
+      } catch (fehler) {
+        if (fehler.name === 'AbortError') return;
+      }
+    }
+    herunterladen(bytes, name);
+    meldungKurz('#datei-kopie', 'Kopie heruntergeladen ✓');
+  });
+
+  $('#datei-schliessen').addEventListener('click', async () => {
+    clearTimeout(sicherungLaeuft);
+    if (!datei.beispiel && !(await speichern())) return;
+    location.reload();
+  });
+}
+
+function herunterladen(bytes, name) {
+  const adresse = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+  const verweis = Object.assign(document.createElement('a'), { href: adresse, download: name });
+  document.body.append(verweis);
+  verweis.click();
+  verweis.remove();
+  setTimeout(() => URL.revokeObjectURL(adresse), 1000);
+}
+
+function heuteKurz() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Kurze Rückmeldung direkt am Knopf -- verlässlicher als eine Meldung irgendwo. */
+function meldungKurz(auswahl, text) {
+  const knopf = $(auswahl);
+  const vorher = knopf.textContent;
+  knopf.textContent = text;
+  knopf.disabled = true;
+  setTimeout(() => {
+    knopf.textContent = vorher;
+    knopf.disabled = false;
+  }, 1600);
+}
+
+function dateiAngabenZeichnen() {
+  const zeitraum = kd.zeitraumFuer(datei);
+  const angaben = [
+    ['Klasse', `${datei.klasse}, Schuljahr ${datei.schuljahr}`],
+    ['Kinder', `${datei.lernende.length}`],
+    ['Zeitraum', `${zeitraum} (Start ${datumLang(datei.zyklus.start)})`],
+    ['Einschätzungen', `${datei.einschaetzungen.length}`],
+    ['Coaching-Gespräche', `${datei.coachings.length}`],
+    ['Zuletzt geändert', datei.geaendert ? new Date(datei.geaendert).toLocaleString('de-DE') : '–'],
+    ['Ablage', datei.beispiel ? 'Beispieldaten – nur im Arbeitsspeicher'
+      : griff?.name ?? 'wird beim Sichern abgefragt'],
+  ];
+
+  $('#datei-angaben').innerHTML = angaben
+    .map(([k, w]) => `<div><dt>${k}</dt><dd>${escapen(String(w))}</dd></div>`)
+    .join('');
+
+  // Im Beispielmodus wäre Sichern irreführend
+  for (const id of ['#datei-sichern', '#datei-kopie']) $(id).disabled = !!datei.beispiel;
 }
 
 // ---------------------------------------------------------------- Anwendung
@@ -230,7 +316,8 @@ function alesZeichnen() {
         : 'alle Selbsteinschätzungen da';
 
   klassenlisteZeichnen();
-  zeilenwahlZeichnen();
+  fremdZeichnen();
+  dateiAngabenZeichnen();
 }
 
 function klassenlisteZeichnen() {
@@ -809,40 +896,187 @@ function abschliessen(nummer) {
 
 // ---------------------------------------------------------------- Fremdeinschätzung
 
-function zeilenwahlZeichnen() {
-  const stufen = [...new Set(datei.lernende.map((l) => l.stufe))];
-  if (!stufen.length) {
-    $('#zeilenwahl').innerHTML = '';
+// Zwei Wege durch dieselbe Aufgabe:
+// „nach Kind" für die Vorbereitung eines Gesprächs (ein Kind komplett),
+// „nach Kriterium" für den Klassendurchgang (ein Maßstab für alle).
+let fremdModus = 'kind';
+let fremdKindId = null;
+
+function fremdVerdrahten() {
+  for (const knopf of document.querySelectorAll('.modus')) {
+    knopf.addEventListener('click', () => {
+      fremdModus = knopf.dataset.modus;
+      for (const k of document.querySelectorAll('.modus')) {
+        k.classList.toggle('aktiv', k === knopf);
+      }
+      fremdZeichnen();
+    });
+  }
+}
+
+function fremdZeichnen() {
+  if (!datei?.lernende.length) {
+    $('#fremd-wahl').innerHTML = '';
+    $('#fremd-hinweis').textContent = '';
     $('#fremd-raster').innerHTML = '<p class="leer">Erst Kinder anlegen.</p>';
     return;
   }
+  if (fremdModus === 'kind') fremdNachKind();
+  else fremdNachKriterium();
+}
 
-  // Zeilen aller vorkommenden Stufen, ohne Dopplungen
+/** Kind auswählen, dann alle Zeilen dieses Kindes auf einen Blick. */
+function fremdNachKind() {
+  const zeitraum = kd.zeitraumFuer(datei);
+
+  if (!datei.lernende.some((l) => l.id === fremdKindId)) {
+    fremdKindId = datei.lernende[0].id;
+  }
+
+  $('#fremd-hinweis').textContent =
+    'Wähle ein Kind – darunter erscheinen die Kriterien seiner Stufe.';
+
+  $('#fremd-wahl').innerHTML = datei.lernende
+    .map((kind) => {
+      const stand = kindstand(kind, zeitraum);
+      return `<button type="button" class="wahl ${kind.id === fremdKindId ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
+                      data-kindwahl="${kind.id}">${escapen(kind.name)}
+                <span class="wahl-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
+              </button>`;
+    })
+    .join('');
+
+  for (const knopf of $('#fremd-wahl').querySelectorAll('[data-kindwahl]')) {
+    knopf.addEventListener('click', () => {
+      fremdKindId = knopf.dataset.kindwahl;
+      fremdZeichnen();
+    });
+  }
+
+  const kind = datei.lernende.find((l) => l.id === fremdKindId);
+  const s = stufe(katalog, kind.stufe);
+  const bewertungen = kd.einschaetzung(datei, kind.id, zeitraum, 'fremd')?.bewertungen ?? {};
+
+  $('#fremd-raster').innerHTML = `
+    <p class="rastertitel"><strong>${escapen(kind.name)}</strong>
+      <span style="color:${s.farbe}">${s.name}</span></p>` +
+    bewertungszeilen(katalog, kind.stufe)
+      .map((zeile) => zeileMitSkala({
+        schluessel: `${kind.id}|${zeile.id}`,
+        text: zeile.text,
+        unterpunkte: zeile.art === 'sammel' ? zeile.enthaelt.map((k) => k.text) : [],
+        gewaehlt: bewertungen[zeile.id],
+      }))
+      .join('');
+
+  rasterVerdrahten();
+}
+
+/** Ein Kriterium, alle Kinder, die es betrifft. */
+function fremdNachKriterium() {
+  const zeitraum = kd.zeitraumFuer(datei);
   const zeilen = new Map();
-  for (const s of stufen) {
+  for (const s of new Set(datei.lernende.map((l) => l.stufe))) {
     for (const z of bewertungszeilen(katalog, s)) zeilen.set(z.id, z);
   }
   const liste = [...zeilen.values()];
   if (!zeileAktiv || !zeilen.has(zeileAktiv)) zeileAktiv = liste[0].id;
 
-  $('#zeilenwahl').innerHTML = liste
+  $('#fremd-hinweis').textContent =
+    'Ein Kriterium für alle – so bleibt der Maßstab über die Klasse gleich.';
+
+  $('#fremd-wahl').innerHTML = liste
     .map((z) => {
-      const stand = zeilenstand(z.id);
-      return `<button type="button" class="zeile ${z.id === zeileAktiv ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
-                      data-zeile="${z.id}">${escapen(z.text)}
-                <span class="zeile-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
+      const stand = zeilenstand(z.id, zeitraum);
+      return `<button type="button" class="wahl ${z.id === zeileAktiv ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
+                      data-zeilenwahl="${z.id}">${escapen(z.text)}
+                <span class="wahl-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
               </button>`;
     })
     .join('');
 
-  for (const knopf of $('#zeilenwahl').querySelectorAll('[data-zeile]')) {
+  for (const knopf of $('#fremd-wahl').querySelectorAll('[data-zeilenwahl]')) {
     knopf.addEventListener('click', () => {
-      zeileAktiv = knopf.dataset.zeile;
-      zeilenwahlZeichnen();
+      zeileAktiv = knopf.dataset.zeilenwahl;
+      fremdZeichnen();
     });
   }
 
-  fremdRasterZeichnen(zeilen.get(zeileAktiv));
+  const zeile = zeilen.get(zeileAktiv);
+  const betroffen = datei.lernende.filter((kind) =>
+    bewertungszeilen(katalog, kind.stufe).some((z) => z.id === zeile.id)
+  );
+
+  $('#fremd-raster').innerHTML = betroffen.length
+    ? `<p class="rastertitel"><strong>${escapen(zeile.text)}</strong></p>` +
+      betroffen
+        .map((kind) =>
+          zeileMitSkala({
+            schluessel: `${kind.id}|${zeile.id}`,
+            text: kind.name,
+            unterpunkte: [],
+            gewaehlt: kd.einschaetzung(datei, kind.id, zeitraum, 'fremd')?.bewertungen?.[zeile.id],
+          })
+        )
+        .join('')
+    : '<p class="leer">Für dieses Kriterium gibt es hier niemanden.</p>';
+
+  rasterVerdrahten();
+}
+
+/** Eine Erfassungszeile: Beschriftung links, Skala rechts. */
+function zeileMitSkala({ schluessel, text, unterpunkte, gewaehlt }) {
+  const knoepfe = katalog.skala
+    .map(
+      (s) => `
+      <label class="${gewaehlt === s.id ? 'gewaehlt' : ''}" data-wert="${s.id}">
+        <input type="radio" name="f_${schluessel}" value="${s.id}" ${gewaehlt === s.id ? 'checked' : ''}>
+        <span aria-hidden="true">${s.kurz}</span>
+        <span class="nur-lesen">${s.text}</span>
+      </label>`
+    )
+    .join('');
+
+  const details = unterpunkte.length
+    ? `<ul class="teilkriterien">${unterpunkte.map((u) => `<li>${escapen(u)}</li>`).join('')}</ul>`
+    : '';
+
+  return `
+    <div class="rasterzeile" data-schluessel="${schluessel}">
+      <span class="rasterzeile-name">${escapen(text)}${details}</span>
+      <div class="rasterskala">${knoepfe}</div>
+    </div>`;
+}
+
+function rasterVerdrahten() {
+  $('#fremd-raster').onchange = (ereignis) => {
+    const zeileEl = ereignis.target.closest('.rasterzeile');
+    const [kindId, zeilenId] = zeileEl.dataset.schluessel.split('|');
+    const kind = datei.lernende.find((l) => l.id === kindId);
+
+    kd.einschaetzungSetzen(datei, {
+      schuelerId: kind.id,
+      zeitraum: kd.zeitraumFuer(datei),
+      quelle: 'fremd',
+      // Stufe mitschreiben: später ist sonst nicht mehr erkennbar, gegen
+      // welche Anforderungen damals bewertet wurde
+      stufe: kind.stufe,
+      bewertungen: { [zeilenId]: ereignis.target.value },
+    });
+
+    for (const l of zeileEl.querySelectorAll('label')) {
+      l.classList.toggle('gewaehlt', l.dataset.wert === ereignis.target.value);
+    }
+    merken();
+    klassenlisteZeichnen();
+    staendeAuffrischen();
+  };
+}
+
+/** Wie viele Zeilen sind für dieses Kind erfasst? */
+function kindstand(kind, zeitraum = kd.zeitraumFuer(datei)) {
+  const zeilenIds = bewertungszeilen(katalog, kind.stufe).map((z) => z.id);
+  return kd.erfassungsstand(datei, kind.id, zeitraum, 'fremd', zeilenIds);
 }
 
 /** Wie viele der betroffenen Kinder sind für diese Zeile schon eingeschätzt? */
@@ -857,68 +1091,17 @@ function zeilenstand(zeileId, zeitraum = kd.zeitraumFuer(datei)) {
 }
 
 /** Nur die Zähler auffrischen -- ein Neuzeichnen würde den Fokus verlieren. */
-function zeilenstaendeAuffrischen() {
-  for (const knopf of document.querySelectorAll('[data-zeile]')) {
-    const stand = zeilenstand(knopf.dataset.zeile);
+function staendeAuffrischen() {
+  const zeitraum = kd.zeitraumFuer(datei);
+  for (const knopf of document.querySelectorAll('[data-kindwahl], [data-zeilenwahl]')) {
+    const stand = knopf.dataset.kindwahl
+      ? kindstand(datei.lernende.find((l) => l.id === knopf.dataset.kindwahl), zeitraum)
+      : zeilenstand(knopf.dataset.zeilenwahl, zeitraum);
     knopf.classList.toggle('fertig', stand.fertig);
-    knopf.querySelector('.zeile-stand').textContent = stand.fertig
+    knopf.querySelector('.wahl-stand').textContent = stand.fertig
       ? '✓'
       : `${stand.erfasst}/${stand.gesamt}`;
   }
-}
-
-function fremdRasterZeichnen(zeile) {
-  const zeitraum = kd.zeitraumFuer(datei);
-  // nur Kinder, für die diese Zeile gilt
-  const betroffen = datei.lernende.filter((kind) =>
-    bewertungszeilen(katalog, kind.stufe).some((z) => z.id === zeile.id)
-  );
-
-  if (!betroffen.length) {
-    $('#fremd-raster').innerHTML = '<p class="leer">Für diese Zeile gibt es hier niemanden.</p>';
-    return;
-  }
-
-  $('#fremd-raster').innerHTML = betroffen
-    .map((kind) => {
-      const vorhanden = kd.einschaetzung(datei, kind.id, zeitraum, 'fremd')?.bewertungen?.[zeile.id];
-      const knoepfe = katalog.skala
-        .map(
-          (s) => `
-          <label class="${vorhanden === s.id ? 'gewaehlt' : ''}" data-wert="${s.id}">
-            <input type="radio" name="f_${kind.id}" value="${s.id}" ${vorhanden === s.id ? 'checked' : ''}>
-            <span aria-hidden="true">${s.kurz}</span>
-            <span class="nur-lesen">${s.text}</span>
-          </label>`
-        )
-        .join('');
-      return `
-        <div class="rasterzeile" data-schueler="${kind.id}">
-          <span class="rasterzeile-name">${escapen(kind.name)}</span>
-          <div class="rasterskala">${knoepfe}</div>
-        </div>`;
-    })
-    .join('');
-
-  $('#fremd-raster').onchange = (ereignis) => {
-    const zeileEl = ereignis.target.closest('.rasterzeile');
-    const kind = datei.lernende.find((l) => l.id === zeileEl.dataset.schueler);
-    kd.einschaetzungSetzen(datei, {
-      schuelerId: kind.id,
-      zeitraum,
-      quelle: 'fremd',
-      // Stufe mitschreiben: später ist sonst nicht mehr erkennbar, gegen
-      // welche Anforderungen damals bewertet wurde
-      stufe: kind.stufe,
-      bewertungen: { [zeile.id]: ereignis.target.value },
-    });
-    for (const l of zeileEl.querySelectorAll('label')) {
-      l.classList.toggle('gewaehlt', l.dataset.wert === ereignis.target.value);
-    }
-    merken();
-    klassenlisteZeichnen();
-    zeilenstaendeAuffrischen();
-  };
 }
 
 // ---------------------------------------------------------------- Hilfen

@@ -177,16 +177,34 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 
 /* ---------- Fremdeinschätzung ---------- */
 
-.zeilenwahl { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0 1.25rem; }
-.zeile {
+.moduswahl { display: inline-flex; gap: 0.2rem; padding: 0.2rem;
+             background: var(--grund); border: 1px solid var(--linie); border-radius: 10px; }
+.modus { padding: 0.4rem 0.9rem; color: var(--text-leise); background: transparent; border: 0; }
+.modus.aktiv { color: var(--text); background: var(--flaeche); font-weight: 600;
+               box-shadow: var(--schatten); }
+
+.wahlleiste { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 1.25rem; }
+.wahl {
+  display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.45rem 0.75rem; text-align: left; font-size: 0.9rem;
   color: var(--text-leise); background: var(--flaeche);
   border: 1px solid var(--linie); border-radius: 20px;
 }
-.zeile.aktiv { color: #fff; background: var(--stufe); border-color: var(--stufe); font-weight: 600; }
+.wahl.aktiv { color: #fff; background: var(--stufe); border-color: var(--stufe); font-weight: 600; }
+.wahl-stand {
+  font-size: 0.78rem; font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.35rem; border-radius: 5px;
+  background: var(--grund); color: var(--text-leise);
+}
+.wahl.aktiv .wahl-stand { background: rgb(255 255 255 / 22%); color: #fff; }
+.wahl.fertig:not(.aktiv) .wahl-stand { background: var(--gut); color: #fff; }
+
+.rastertitel { margin: 0 0 0.6rem; color: var(--text-leise); }
+.rastertitel strong { color: var(--text); margin-right: 0.5rem; }
 
 .rasterzeile {
   display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem;
+  min-height: 3.4rem;
   padding: 0.5rem 0.9rem; margin-bottom: 0.35rem;
   background: var(--flaeche); border-radius: 10px; box-shadow: var(--schatten);
 }
@@ -321,14 +339,6 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
   color: var(--text-leise); background: var(--grund); border-radius: 5px;
 }
 
-.zeile { display: inline-flex; align-items: center; gap: 0.5rem; }
-.zeile-stand {
-  font-size: 0.78rem; font-variant-numeric: tabular-nums;
-  padding: 0.05rem 0.35rem; border-radius: 5px;
-  background: var(--grund); color: var(--text-leise);
-}
-.zeile.aktiv .zeile-stand { background: rgb(255 255 255 / 22%); color: #fff; }
-.zeile.fertig:not(.aktiv) .zeile-stand { background: var(--gut); color: #fff; }
 
 /* ---------- Breite Bildschirme ---------- */
 
@@ -431,3 +441,42 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
     border-top: 1px solid #000; font-size: 10pt; white-space: pre;
   }
 }
+
+/* ---------- Gleiche Höhen bei nebeneinanderstehenden Kästen ----------
+   Grid-Kinder strecken sich per Vorgabe -- außer man setzt align-items auf
+   start. Genau das hatte ich an mehreren Stellen getan, dadurch standen
+   verschieden hohe Kästen nebeneinander. */
+
+#klassenliste { align-items: stretch; }
+#klassenliste .kind { margin-bottom: 0; height: 100%; }
+@media (min-width: 60rem) { #klassenliste { gap: 0.5rem; } }
+
+.entscheidung { align-items: stretch; }
+.entscheidung-feld { height: 100%; }
+
+.zwei-spalten > * { margin-top: 0; }
+
+/* ---------- Datei-Bereich ---------- */
+
+.kachelreihe { display: grid; gap: 0.75rem; align-items: stretch; margin-top: 1rem; }
+@media (min-width: 52rem) { .kachelreihe { grid-template-columns: repeat(3, 1fr); } }
+
+.kachel {
+  display: flex; flex-direction: column; gap: 0.5rem; height: 100%;
+  padding: 1rem 1.1rem; background: var(--flaeche);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+}
+.kachel h3 { margin: 0; font-size: 1rem; }
+.kachel p { margin: 0; color: var(--text-leise); font-size: 0.92rem; flex: 1; }
+.kachel .knopf-klein { align-self: flex-start; }
+.kachel .knopf-klein:disabled { opacity: 0.45; cursor: default; }
+
+.angaben { display: grid; gap: 0.35rem; margin: 0; }
+@media (min-width: 44rem) { .angaben { grid-template-columns: 1fr 1fr; } }
+.angaben > div {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 0.8rem; background: var(--flaeche);
+  border-radius: 8px; box-shadow: var(--schatten);
+}
+.angaben dt { color: var(--text-leise); }
+.angaben dd { margin: 0; font-weight: 600; text-align: right; }
