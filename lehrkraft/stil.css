@@ -473,76 +473,31 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 .angaben dt { color: var(--text-leise); }
 .angaben dd { margin: 0; font-weight: 600; text-align: right; }
 
-/* ---------- Fußzeile ---------- */
+/* ---------- Fußzeile: dezent, mittig, zwei Zeilen ---------- */
 
 .fusszeile {
-  margin-top: 2.5rem;
-  padding: 1.5rem 1.25rem 4.5rem;
-  border-top: 1px solid var(--linie);
-  background: var(--flaeche);
-}
-
-.fusszeile-innen {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.5rem;
-  max-width: 78rem;
-  margin: 0 auto;
-}
-
-.fusszeile-logo {
-  width: 118px;
-  height: auto;
-  flex: none;
-  opacity: 0.9;
-}
-
-.fusszeile-text {
-  flex: 1;
-  min-width: 15rem;
-  margin: 0;
-  font-size: 0.82rem;
+  max-width: 44rem;
+  margin: 2.5rem auto 0;
+  padding: 1.25rem 1.5rem 4.5rem;
+  text-align: center;
+  font-size: 0.8rem;
   line-height: 1.6;
   color: var(--text-leise);
+  border-top: 1px solid var(--linie);
 }
 
-.fusszeile-text strong {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.15rem;
-}
+.fusszeile p { margin: 0; }
+.fusszeile p + p { margin-top: 0.5rem; }
 
 .zur-startseite {
-  flex: none;
-  padding: 0.5rem 1rem;
-  font-size: 0.88rem;
   color: var(--text-leise);
   text-decoration: none;
-  white-space: nowrap;
-  background: var(--grund);
-  border: 1px solid var(--linie);
-  border-radius: 20px;
-  transition: color 0.12s, border-color 0.12s;
+  border-bottom: 1px solid var(--linie);
+  padding-bottom: 1px;
 }
-
 .zur-startseite::before { content: "← "; }
-.zur-startseite:hover { color: var(--text); border-color: var(--text-leise); }
-.zur-startseite:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
-
-@media (prefers-reduced-motion: reduce) { .zur-startseite { transition: none; } }
-
-@media (prefers-color-scheme: dark) {
-  .fusszeile-logo { padding: 0.25rem 0.4rem; background: #fff; border-radius: 7px; }
-}
-
-/* schmal: gestapelt und mittig */
-@media (max-width: 34rem) {
-  .fusszeile-innen { flex-direction: column; text-align: center; }
-  .fusszeile-text { min-width: 0; }
-}
+.zur-startseite:hover { color: var(--text); border-bottom-color: var(--text-leise); }
+.zur-startseite:focus-visible { outline: 3px solid var(--stufe); outline-offset: 3px; }
 
 .fusszeile-klein {
   margin: 1.5rem 0 0;

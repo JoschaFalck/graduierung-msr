@@ -122,6 +122,13 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
   immer dieselbe Klasse.
 - **Schüler:** `…/schueler/#test` blendet eine Leiste mit Stufenwechsel und Profil-Zurücksetzen ein.
 
+## Startseite
+
+Titelbild als Streifen oben (`bilder/header.jpg`, zwei Auflösungen über `srcset`), darunter
+Titel, Schullogo und die beiden Eingänge. Der Bildausschnitt ist bewusst nach oben gesetzt
+(`object-position: center 16%`) -- die Stufennamen auf den Karten sind die Botschaft und dürfen
+nicht abgeschnitten werden.
+
 ## Layout
 
 Beide Anwendungen sind für das **iPad im Querformat** ausgelegt. Ab 48 rem Breite steht die

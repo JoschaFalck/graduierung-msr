@@ -8,105 +8,49 @@
 <title>Graduierung – MS Rednitzhembach</title>
 <link rel="icon" href="symbole/symbol-192.png" type="image/png">
 <style>
-  :root {
-    --blau: #16506B; --grund: #f4f6f8; --flaeche: #fff;
-    --text: #1b2733; --leise: #5a6b7b; --linie: #d8dee4;
-    --kopfgrund: #eef1f4;
-  }
+  :root { --blau: #16506B; --grund: #f4f6f8; --flaeche: #fff;
+          --text: #1b2733; --leise: #5a6b7b; --linie: #d8dee4; }
   @media (prefers-color-scheme: dark) {
     :root { --grund: #12181e; --flaeche: #1c242c; --text: #e8eef4; --leise: #9fb0c0;
-            --linie: #33404c; --blau: #4a9ec4; --kopfgrund: #182029; }
+            --linie: #33404c; --blau: #4a9ec4; }
   }
   * { box-sizing: border-box; }
-
   body {
     margin: 0; min-height: 100vh;
-    display: flex; flex-direction: column;
     background: var(--grund); color: var(--text);
     font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
 
-  /* ---------- Titelbild ---------- */
-
-  .titelbild {
-    position: relative;
-    background: var(--kopfgrund);
-    border-bottom: 1px solid var(--linie);
-    overflow: hidden;
-  }
-
-  /* Ausschnitt oben halten -- die Stufennamen auf den Karten sind die Botschaft */
+  /* Titelbild: definierter Streifen oben, Ausschnitt hält die Stufennamen im Bild */
+  .titelbild { border-bottom: 1px solid var(--linie); }
   .titelbild img {
-    display: block; width: 100%; height: clamp(190px, 26vw, 330px);
-    object-fit: cover; object-position: center 14%;
+    display: block; width: 100%; height: clamp(150px, 18vw, 230px);
+    object-fit: cover; object-position: center 16%;
   }
 
-  /* weicher Übergang, damit der Titel darunter nicht abgeschnitten wirkt */
-  .titelbild::after {
-    content: ""; position: absolute; inset: auto 0 0; height: 32%;
-    background: linear-gradient(to bottom, transparent, var(--grund));
-    pointer-events: none;
-  }
+  main { width: min(30rem, 100%); margin: 0 auto; padding: 2rem 1.5rem 0;
+         text-align: center; }
 
-  .titelzeile {
-    position: relative; z-index: 1;
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-    gap: 1rem 1.5rem;
-    max-width: 62rem; margin: -2.6rem auto 0; padding: 0 1.5rem;
-  }
+  h1 { font-size: 1.5rem; margin: 0 0 0.75rem; }
 
-  .ankersymbol { width: 76px; height: 76px; border-radius: 18px; flex: none;
-                 box-shadow: 0 4px 16px rgb(20 40 60 / 22%); }
-  h1 { font-size: 1.75rem; margin: 0; }
-  .titelzeile > div { text-align: left; }
-  .unterzeile { margin: 0.1rem 0 0; color: var(--leise); font-size: 0.95rem; }
+  .schullogo-feld { display: inline-block; padding: 0.5rem 0.7rem; margin-bottom: 2rem;
+                    background: #fff; border-radius: 10px; }
+  .schullogo-feld img { display: block; width: 210px; max-width: 100%; height: auto; }
 
-  /* ---------- Eingänge ---------- */
-
-  main { flex: 1; width: min(46rem, 100%); margin: 0 auto; padding: 2.25rem 1.5rem 1rem; }
-
-  .eingaenge { display: grid; gap: 0.75rem; align-items: stretch; }
-  @media (min-width: 40rem) { .eingaenge { grid-template-columns: 1fr 1fr; } }
-
-  .eingaenge a {
-    display: flex; flex-direction: column; gap: 0.2rem; height: 100%;
-    background: var(--flaeche); color: inherit; text-decoration: none;
-    border: 1px solid var(--linie); border-top: 4px solid var(--blau); border-radius: 14px;
-    padding: 1.15rem 1.25rem;
+  a.eingang {
+    display: block; background: var(--flaeche); color: inherit; text-decoration: none;
+    border: 1px solid var(--linie); border-left: 5px solid var(--blau); border-radius: 14px;
+    padding: 1.1rem 1.25rem; margin-bottom: 0.75rem; text-align: left;
     box-shadow: 0 1px 3px rgb(20 40 60 / 10%);
-    transition: box-shadow 0.15s, transform 0.15s;
   }
-  .eingaenge a:hover { box-shadow: 0 6px 20px rgb(20 40 60 / 14%); transform: translateY(-2px); }
-  .eingaenge a:focus-visible { outline: 3px solid var(--blau); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) { .eingaenge a { transition: none; } }
+  a.eingang strong { display: block; font-size: 1.05rem; }
+  a.eingang span { color: var(--leise); font-size: 0.92rem; }
+  a.eingang:focus-visible { outline: 3px solid var(--blau); outline-offset: 3px; }
 
-  .eingaenge strong { font-size: 1.05rem; }
-  .eingaenge span { color: var(--leise); font-size: 0.92rem; }
-
-  .hinweis { margin: 1.25rem 0 0; text-align: center; color: var(--leise); font-size: 0.9rem; }
-
-  /* ---------- Fußzeile ---------- */
-
-  footer { margin-top: auto; padding: 1.5rem; background: var(--flaeche);
-           border-top: 1px solid var(--linie); }
-  .fussinhalt {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
-    max-width: 62rem; margin: 0 auto;
-  }
-  .fusslogo { width: 118px; height: auto; flex: none; opacity: 0.9; }
-  @media (prefers-color-scheme: dark) {
-    .fusslogo { padding: 0.25rem 0.4rem; background: #fff; border-radius: 7px; }
-  }
-  .fusstext { flex: 1; min-width: 15rem; margin: 0; font-size: 0.82rem;
-              line-height: 1.6; color: var(--leise); }
-  .fusstext strong { display: block; font-size: 0.9rem; font-weight: 600;
-                     color: var(--text); margin-bottom: 0.15rem; }
-  @media (max-width: 34rem) {
-    .fussinhalt { flex-direction: column; text-align: center; }
-    .fusstext { min-width: 0; }
-    .titelzeile { margin-top: -2.5rem; }
-    .titelzeile > div { text-align: center; }
-  }
+  .hinweis { margin: 2rem 0 0; color: var(--leise); font-size: 0.9rem; }
+  footer { max-width: 44rem; margin: 0 auto; padding: 0.5rem 1.5rem 2.5rem;
+           text-align: center; color: var(--leise); font-size: 0.82rem; line-height: 1.6; }
+  footer p { margin: 0; }
 </style>
 </head>
 <body>
@@ -119,39 +63,30 @@
        width="1200" height="564">
 </header>
 
-<div class="titelzeile">
-  <img class="ankersymbol" src="symbole/symbol-512.png" alt="">
-  <div>
-    <h1>Graduierung</h1>
-    <p class="unterzeile">Mittelschule Rednitzhembach</p>
-  </div>
-</div>
-
 <main>
-  <div class="eingaenge">
-    <a href="schueler/">
-      <strong>Für Schülerinnen und Schüler</strong>
-      <span>Meinen Ausweis ansehen und mich selbst einschätzen</span>
-    </a>
+  <h1>Graduierung</h1>
+  <span class="schullogo-feld">
+    <img src="symbole/schullogo.png"
+         alt="Mittelschule Rednitzhembach" width="900" height="237">
+  </span>
 
-    <a href="lehrkraft/">
-      <strong>Für Lehrkräfte</strong>
-      <span>Klassendatei öffnen, einsammeln, einschätzen</span>
-    </a>
-  </div>
+  <a class="eingang" href="schueler/">
+    <strong>Für Schülerinnen und Schüler</strong>
+    <span>Meinen Ausweis ansehen und mich selbst einschätzen</span>
+  </a>
+
+  <a class="eingang" href="lehrkraft/">
+    <strong>Für Lehrkräfte</strong>
+    <span>Klassendatei öffnen, einsammeln, einschätzen</span>
+  </a>
 
   <p class="hinweis">Alle Daten bleiben auf dem jeweiligen Gerät.</p>
 </main>
 
 <footer>
-  <div class="fussinhalt">
-    <img class="fusslogo" src="symbole/schullogo.png" alt="" width="900" height="237">
-    <p class="fusstext">
-      <strong>App zum Graduierungssystem der Mittelschule Rednitzhembach</strong>
-      Zwischen den Brücken 3 · 91126 Rednitzhembach<br>
-      Verantwortlich: Joscha Falck
-    </p>
-  </div>
+  <p>App zum Graduierungssystem der Mittelschule Rednitzhembach ·
+    Zwischen den Brücken 3 · 91126 Rednitzhembach ·
+    Verantwortlich: Joscha Falck</p>
 </footer>
 
 </body>
