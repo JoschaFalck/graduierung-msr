@@ -59,6 +59,24 @@
       <button type="submit" class="knopf-gross">Öffnen</button>
       <button type="button" class="knopf-leise" data-zurueck>Zurück</button>
     </form>
+
+    <details class="anleitung-kurz">
+      <summary>So läuft es ab – in sechs Schritten</summary>
+      <ol>
+        <li><strong>Klasse anlegen</strong> – Klasse, Schuljahr, Startdatum und ein Passwort.
+          Namen kannst du gleich einfügen oder später aus den ersten Abgaben aufbauen.</li>
+        <li><strong>Adresse an die Klasse geben</strong> – QR-Code der Schüleradresse an die Wand.</li>
+        <li><strong>Kinder schätzen sich ein</strong> und schicken das Ergebnis per AirDrop.</li>
+        <li><strong>Einsammeln</strong> – die empfangenen Dateien in die Anwendung ziehen.</li>
+        <li><strong>Fremdeinschätzung</strong> eintragen, Kind für Kind oder Kriterium für Kriterium.</li>
+        <li><strong>Coaching-Gespräch</strong> führen und das Ergebnis festhalten.</li>
+      </ol>
+      <p>Ausführlich steht das unter „Anleitung“, sobald eine Klasse geöffnet ist.</p>
+    </details>
+
+    <p class="fusszeile-klein">App zum Graduierungssystem der Mittelschule Rednitzhembach,
+      Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.<br>
+      <a href="../">Zur Startseite</a></p>
   </div>
 </div>
 
@@ -68,7 +86,7 @@
     <span class="beispiel-marke">Beispiel</span>
     <span>Erfundene Kinder, erfundene Einschätzungen. Nichts wird gespeichert.</span>
     <span class="leiste-fuell"></span>
-    <button type="button" id="beispiel-beenden">beenden</button>
+    <button type="button" id="beispiel-beenden">Testmodus verlassen</button>
   </div>
 
   <header class="kopf">
@@ -82,7 +100,10 @@
   </header>
 
   <div class="leiste">
-    <span class="marke" id="leiste-zeitraum">Zeitraum –</span>
+    <label class="zeitraumwahl">Zeitraum
+      <select id="leiste-zeitraum" aria-label="Zeitraum wählen"></select>
+    </label>
+    <button type="button" class="knopf-winzig" id="zeitraum-heute" hidden>zurück zu heute</button>
     <span id="leiste-status" class="leiste-status">–</span>
     <span class="leiste-fuell"></span>
     <span class="gesichert" id="gesichert">gesichert</span>
@@ -131,7 +152,10 @@
 
     <!-- Coaching-Gespräch -->
     <section class="ansicht" id="ansicht-coaching" hidden>
-      <button type="button" class="knopf-klein" id="coaching-zurueck">← Zurück</button>
+      <p class="lang">Wähle das Kind, mit dem du sprichst. Der Bogen darunter zeigt die
+        vier Zeiträume des Blocks, in dem der oben gewählte Zeitraum liegt.</p>
+      <div class="wahlleiste" id="coaching-wahl"></div>
+      <button type="button" class="knopf-klein" id="coaching-zurueck" hidden>← Zurück</button>
       <h1 class="kind-titel" id="coaching-titel">–</h1>
       <p class="lang" id="coaching-unter">–</p>
 
@@ -194,42 +218,116 @@
 
     <!-- Datei -->
     <section class="ansicht" id="ansicht-datei" hidden>
-      <p class="lang">Alle Daten dieser Klasse stecken in einer einzigen verschlüsselten Datei.
-        Ohne dein Passwort ist sie für niemanden lesbar – auch nicht für dich.</p>
+      <p class="lang">Änderungen werden automatisch gesichert, solange diese Klasse geöffnet ist.
+        Lege am Ende der Bearbeitung trotzdem eine eigene Sicherung ab – dann liegen die
+        Klassendaten unabhängig von Browser und Gerät bei dir.</p>
 
-      <div class="kachelreihe">
-        <div class="kachel">
-          <h3>Stand sichern</h3>
-          <p>Schreibt den aktuellen Stand sofort zurück. Passiert sonst automatisch
-            kurz nach jeder Änderung.</p>
-          <button type="button" class="knopf-klein" id="datei-sichern">Jetzt sichern</button>
-        </div>
-
-        <div class="kachel">
-          <h3>Kopie ablegen</h3>
-          <p>Speichert den Stand zusätzlich an einem Ort deiner Wahl – für die
-            Sicherung auf einem Stick oder in deinem Backup.</p>
-          <button type="button" class="knopf-klein" id="datei-kopie">Kopie speichern unter …</button>
-        </div>
-
-        <div class="kachel">
-          <h3>Klasse schließen</h3>
-          <p>Sichert und schließt die Datei. Danach ist wieder das Passwort nötig –
-            sinnvoll, wenn du den Rechner weggibst.</p>
-          <button type="button" class="knopf-klein" id="datei-schliessen">Sichern und schließen</button>
-        </div>
+      <div class="knopfreihe">
+        <button type="button" class="knopf-gross" id="datei-kopie">Klassendaten lokal sichern</button>
+        <button type="button" class="knopf-leise" id="datei-schliessen">Klasse schließen</button>
       </div>
 
       <h2>Diese Klasse</h2>
       <dl class="angaben" id="datei-angaben"></dl>
     </section>
+
+    <!-- Anleitung -->
+    <section class="ansicht" id="ansicht-anleitung" hidden>
+      <p class="lang">Der Ablauf eines Zyklus – und was dabei wo gespeichert wird.</p>
+
+      <ol class="schritte">
+        <li>
+          <h3>Klasse anlegen</h3>
+          <p>Klasse, Schuljahr, erster Tag des ersten Zeitraums und ein Passwort. Das Passwort
+            verschlüsselt die Klassendatei – <strong>ohne es gibt es keinen Weg zurück</strong>,
+            auch nicht für dich. Schreib es dir auf.</p>
+          <p>Die Namen kannst du als Liste einfügen (eine Zeile je Kind) oder weglassen und
+            beim ersten Einsammeln aufbauen lassen.</p>
+        </li>
+        <li>
+          <h3>Adresse an die Klasse geben</h3>
+          <p>Die Kinder brauchen nur die Schüleradresse dieser Anwendung – am einfachsten als
+            QR-Code an der Wand. Hängst du <code>#8a</code> an, ist die Klasse schon
+            vorausgefüllt. Nichts zu installieren.</p>
+          <p>Einmal zu Beginn lohnt es sich, mit der Klasse die Seite auf den Home-Bildschirm
+            zu legen. Dann bleiben Name und eigener Verlauf auf dem iPad erhalten.</p>
+        </li>
+        <li>
+          <h3>Kinder schätzen sich ein</h3>
+          <p>Alle zwei Wochen. Die Kinder füllen die Kriterien ihrer Stufe aus, schreiben einen
+            Belegsatz und schicken das Ergebnis per AirDrop an dein Gerät. Es wird nichts
+            übertragen, was das Kind nicht selbst abschickt.</p>
+        </li>
+        <li>
+          <h3>Einsammeln</h3>
+          <p>Unter <em>Einsammeln</em> die empfangenen Dateien in das Feld ziehen – alle auf
+            einmal. Namen, die es in der Klasse noch nicht gibt, landen unter „Bitte
+            entscheiden“: neu anlegen, einem vorhandenen Kind zuordnen oder verwerfen.</p>
+          <p><strong>Danach den Downloads-Ordner leeren.</strong> Die per AirDrop empfangenen
+            Dateien sind unverschlüsselt – sie sind der einzige Klartext im ganzen Ablauf.</p>
+        </li>
+        <li>
+          <h3>Fremdeinschätzung eintragen</h3>
+          <p>Zwei Wege, oben umschaltbar: <em>Nach Kind</em> zeigt alle Kriterien eines Kindes –
+            gut zur Vorbereitung eines Gesprächs. <em>Nach Kriterium</em> zeigt ein Kriterium für
+            alle Kinder – schneller im Klassendurchgang und der Maßstab bleibt gleich.</p>
+          <p>An jedem Eintrag steht der Stand (<code>3/5</code> oder ✓), damit nichts offen bleibt.</p>
+        </li>
+        <li>
+          <h3>Coaching-Gespräch</h3>
+          <p>Nach vier Zeiträumen, also etwa alle acht Wochen. Unter <em>Coaching</em> das Kind
+            wählen: Der Bogen zeigt die vier Zeiträume mit Selbst- und Lehrkraftsicht
+            nebeneinander, Abweichungen sind gelb hinterlegt.</p>
+          <p>Darunter die Entscheidung – hochstufen, halten oder zurückstufen. Bei gleicher Stufe
+            ist eine Begründung nötig, bei Rückstufung mindestens ein Grund. Über
+            <em>Bogen drucken</em> bekommst du das Blatt mit Unterschriftenzeile.</p>
+        </li>
+      </ol>
+
+      <h2>Zeitraum wechseln</h2>
+      <p class="lang">Oben in der Leiste steht der Zeitraum. Er richtet sich nach dem Datum,
+        lässt sich aber frei umstellen – für nachgetragene Runden, ausgelassene Wochen oder
+        Gespräche, die du vorziehst. „zurück zu heute“ bringt dich wieder in die Gegenwart.</p>
+
+      <h2>Speichern und Sichern</h2>
+      <p class="lang">Änderungen werden automatisch gesichert, solange die Klasse geöffnet ist.
+        In Chrome schreibt die Anwendung dabei direkt in die Datei, die du beim Anlegen gewählt
+        hast; in Safari kommt stattdessen jedes Mal ein Download. <strong>Deshalb die Empfehlung:
+        Chrome benutzen.</strong></p>
+      <p class="lang">Unter <em>Datei</em> legst du am Ende einer Sitzung zusätzlich eine eigene
+        Sicherung ab – die Datei trägt das Datum im Namen und liegt dann unabhängig von Browser
+        und Gerät bei dir. Sie ist verschlüsselt, also auch auf einem Stick oder in einem Backup
+        unbedenklich.</p>
+
+      <h2>Wo die Daten liegen</h2>
+      <p class="lang">Alles bleibt auf den Geräten: die Selbsteinschätzungen bis zum Abschicken
+        auf dem iPad des Kindes, die Klassendaten in deiner verschlüsselten Datei. Es gibt keinen
+        Server und kein Konto. Verlierst du das Passwort, sind die Daten verloren – das ist der
+        Preis dafür, dass sie sonst niemand lesen kann.</p>
+    </section>
   </main>
+
+
+  <footer class="fusszeile">
+    <div class="fusszeile-innen">
+      <img class="fusszeile-logo" src="../symbole/schullogo.png"
+           alt="" width="900" height="237">
+      <p class="fusszeile-text">
+        <strong>App zum Graduierungssystem der Mittelschule Rednitzhembach</strong>
+        Zwischen den Brücken 3 · 91126 Rednitzhembach<br>
+        Verantwortlich: Joscha Falck
+      </p>
+      <a class="zur-startseite" href="../">Zur Startseite</a>
+    </div>
+  </footer>
 
   <nav class="navigation" aria-label="Bereiche">
     <button type="button" data-ansicht="uebersicht" class="aktiv">Übersicht</button>
     <button type="button" data-ansicht="import">Einsammeln</button>
     <button type="button" data-ansicht="fremd">Fremdeinschätzung</button>
+    <button type="button" data-ansicht="coaching">Coaching</button>
     <button type="button" data-ansicht="datei">Datei</button>
+    <button type="button" data-ansicht="anleitung">Anleitung</button>
   </nav>
 </div>
 

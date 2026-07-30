@@ -40,7 +40,7 @@ h2 {
   color: var(--text-leise); margin: 1.75rem 0 0.6rem;
 }
 
-.lang { color: var(--text-leise); max-width: 44rem; }
+.lang { color: var(--text-leise); }
 .hinweis { font-size: 0.9rem; color: var(--text-leise); }
 .fehler { color: var(--warnung); font-weight: 600; }
 .ladefehler { padding: 2rem; }
@@ -136,7 +136,7 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 .gesichert { font-size: 0.85rem; color: var(--text-leise); }
 .gesichert[data-zustand="offen"] { color: var(--mittel); }
 
-.inhalt { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1.5rem 6rem; }
+.inhalt { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1.5rem 0.5rem; }
 .werkzeuge { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 
 /* ---------- Klassenliste ---------- */
@@ -458,18 +458,10 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 
 /* ---------- Datei-Bereich ---------- */
 
-.kachelreihe { display: grid; gap: 0.75rem; align-items: stretch; margin-top: 1rem; }
-@media (min-width: 52rem) { .kachelreihe { grid-template-columns: repeat(3, 1fr); } }
-
-.kachel {
-  display: flex; flex-direction: column; gap: 0.5rem; height: 100%;
-  padding: 1rem 1.1rem; background: var(--flaeche);
-  border-radius: var(--radius); box-shadow: var(--schatten);
-}
-.kachel h3 { margin: 0; font-size: 1rem; }
-.kachel p { margin: 0; color: var(--text-leise); font-size: 0.92rem; flex: 1; }
-.kachel .knopf-klein { align-self: flex-start; }
-.kachel .knopf-klein:disabled { opacity: 0.45; cursor: default; }
+.knopfreihe { display: grid; gap: 0.6rem; margin-top: 1.25rem; }
+.knopfreihe .knopf-gross,
+.knopfreihe .knopf-leise { margin: 0; }
+.knopfreihe .knopf-gross:disabled { opacity: 0.45; cursor: default; }
 
 .angaben { display: grid; gap: 0.35rem; margin: 0; }
 @media (min-width: 44rem) { .angaben { grid-template-columns: 1fr 1fr; } }
@@ -480,3 +472,131 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 }
 .angaben dt { color: var(--text-leise); }
 .angaben dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* ---------- Fußzeile ---------- */
+
+.fusszeile {
+  margin-top: 2.5rem;
+  padding: 1.5rem 1.25rem 4.5rem;
+  border-top: 1px solid var(--linie);
+  background: var(--flaeche);
+}
+
+.fusszeile-innen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  max-width: 78rem;
+  margin: 0 auto;
+}
+
+.fusszeile-logo {
+  width: 118px;
+  height: auto;
+  flex: none;
+  opacity: 0.9;
+}
+
+.fusszeile-text {
+  flex: 1;
+  min-width: 15rem;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-leise);
+}
+
+.fusszeile-text strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+
+.zur-startseite {
+  flex: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text-leise);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--grund);
+  border: 1px solid var(--linie);
+  border-radius: 20px;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.zur-startseite::before { content: "← "; }
+.zur-startseite:hover { color: var(--text); border-color: var(--text-leise); }
+.zur-startseite:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .zur-startseite { transition: none; } }
+
+@media (prefers-color-scheme: dark) {
+  .fusszeile-logo { padding: 0.25rem 0.4rem; background: #fff; border-radius: 7px; }
+}
+
+/* schmal: gestapelt und mittig */
+@media (max-width: 34rem) {
+  .fusszeile-innen { flex-direction: column; text-align: center; }
+  .fusszeile-text { min-width: 0; }
+}
+
+.fusszeile-klein {
+  margin: 1.5rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-leise);
+}
+.fusszeile-klein a { color: var(--stufe); }
+@media print { .fusszeile { display: none; } }
+
+.zeitraumwahl { display: inline-flex; align-items: center; gap: 0.4rem;
+                font-size: 0.85rem; color: var(--text-leise); }
+.zeitraumwahl select {
+  padding: 0.15rem 0.4rem; font: inherit; font-size: 0.85rem; font-weight: 600;
+  color: var(--text); background: var(--grund);
+  border: 1px solid var(--linie); border-radius: 6px;
+}
+.knopf-winzig {
+  padding: 0.15rem 0.5rem; font-size: 0.8rem; color: var(--text-leise);
+  background: transparent; border: 1px solid var(--linie); border-radius: 6px;
+}
+
+/* ---------- Anleitung ---------- */
+
+.anleitung-kurz {
+  margin-top: 1.25rem; padding: 0.85rem 1rem;
+  background: var(--grund); border: 1px solid var(--linie); border-radius: 10px;
+}
+.anleitung-kurz summary { font-weight: 600; cursor: pointer; }
+.anleitung-kurz ol { margin: 0.8rem 0 0; padding-left: 1.2rem; color: var(--text-leise);
+                     font-size: 0.92rem; line-height: 1.55; }
+.anleitung-kurz li { margin-bottom: 0.5rem; }
+.anleitung-kurz strong { color: var(--text); }
+.anleitung-kurz > p { margin: 0.8rem 0 0; font-size: 0.88rem; color: var(--text-leise); }
+
+.schritte { counter-reset: schritt; list-style: none; margin: 1.25rem 0 0; padding: 0;
+            display: grid; gap: 0.6rem; }
+.schritte > li {
+  counter-increment: schritt; position: relative;
+  padding: 1rem 1.2rem 1rem 3.6rem;
+  background: var(--flaeche); border-radius: var(--radius); box-shadow: var(--schatten);
+}
+.schritte > li::before {
+  content: counter(schritt);
+  position: absolute; left: 1.1rem; top: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem;
+  font-size: 0.9rem; font-weight: 700; color: #fff;
+  background: var(--stufe); border-radius: 50%;
+}
+.schritte h3 { margin: 0 0 0.4rem; font-size: 1.02rem; }
+.schritte p { margin: 0 0 0.5rem; color: var(--text-leise); }
+.schritte p:last-child { margin-bottom: 0; }
+.schritte strong { color: var(--text); }
+.schritte em { font-style: normal; font-weight: 600; color: var(--text); }
+code { padding: 0.1rem 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+       font-size: 0.88em; background: var(--grund); border-radius: 5px; }

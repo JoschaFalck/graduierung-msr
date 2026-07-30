@@ -19,6 +19,9 @@ let passwort = null;   // nur im Arbeitsspeicher, nie gespeichert
 let griff = null;      // FileSystemFileHandle, wo der Browser das kann
 let zeileAktiv = null; // gewählte Zeile der Fremdeinschätzung
 let offeneImporte = []; // Namen, die noch zugeordnet werden müssen
+// null = der Zeitraum, in den heute fällt. Frei wählbar, damit sich
+// ausgelassene Runden nachtragen und Gespräche vorziehen lassen.
+let zeitraumWahl = null;
 
 const kannDirektSchreiben = 'showSaveFilePicker' in window;
 
@@ -38,7 +41,7 @@ async function starten() {
   klassenlisteVerdrahten(); // hängt am Container, überlebt jedes Neuzeichnen
   fremdVerdrahten();
 
-  $('#coaching-zurueck').addEventListener('click', () => kindZeigen(coachingKind.id));
+  $('#coaching-zurueck').addEventListener('click', coachingBereitZeigen);
   $('#coaching-drucken').addEventListener('click', () => window.print());
   $('#formular-coaching').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -46,6 +49,14 @@ async function starten() {
   });
   $('#kind-anlegen').addEventListener('click', kindAnlegen);
   dateiVerdrahten();
+  $('#leiste-zeitraum').addEventListener('change', (e) => {
+    zeitraumWahl = Number(e.target.value);
+    alesZeichnen();
+  });
+  $('#zeitraum-heute').addEventListener('click', () => {
+    zeitraumWahl = null;
+    alesZeichnen();
+  });
   $('#kind-zurueck').addEventListener('click', () => {
     document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
   });
@@ -207,11 +218,6 @@ function gesichertZeigen(fertig) {
 // ---------------------------------------------------------------- Datei-Bereich
 
 function dateiVerdrahten() {
-  $('#datei-sichern').addEventListener('click', async () => {
-    clearTimeout(sicherungLaeuft);
-    if (await speichern()) meldungKurz('#datei-sichern', 'Gesichert ✓');
-  });
-
   // Bewusst ohne den gemerkten Griff: die Kopie soll woanders liegen,
   // die Arbeitsdatei bleibt, wo sie ist.
   $('#datei-kopie').addEventListener('click', async () => {
@@ -228,14 +234,14 @@ function dateiVerdrahten() {
         const strom = await ziel.createWritable();
         await strom.write(bytes);
         await strom.close();
-        meldungKurz('#datei-kopie', 'Kopie abgelegt ✓');
+        meldungKurz('#datei-kopie', 'Gesichert ✓');
         return;
       } catch (fehler) {
         if (fehler.name === 'AbortError') return;
       }
     }
     herunterladen(bytes, name);
-    meldungKurz('#datei-kopie', 'Kopie heruntergeladen ✓');
+    meldungKurz('#datei-kopie', 'Datei heruntergeladen ✓');
   });
 
   $('#datei-schliessen').addEventListener('click', async () => {
@@ -271,7 +277,7 @@ function meldungKurz(auswahl, text) {
 }
 
 function dateiAngabenZeichnen() {
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
   const angaben = [
     ['Klasse', `${datei.klasse}, Schuljahr ${datei.schuljahr}`],
     ['Kinder', `${datei.lernende.length}`],
@@ -288,10 +294,33 @@ function dateiAngabenZeichnen() {
     .join('');
 
   // Im Beispielmodus wäre Sichern irreführend
-  for (const id of ['#datei-sichern', '#datei-kopie']) $(id).disabled = !!datei.beispiel;
+  $('#datei-kopie').disabled = !!datei.beispiel;
 }
 
 // ---------------------------------------------------------------- Anwendung
+
+/** Der gerade betrachtete Zeitraum -- gewählt oder aus dem Datum. */
+function aktuellerZeitraum() {
+  return zeitraumWahl ?? kd.zeitraumFuer(datei);
+}
+
+function zeitraumwahlZeichnen() {
+  const heute = kd.zeitraumFuer(datei);
+  // so weit, wie Daten reichen -- mindestens bis heute, plus eine Reserve
+  const hoechster = Math.max(heute, ...datei.einschaetzungen.map((e) => e.zeitraum), 1);
+  const auswahl = $('#leiste-zeitraum');
+
+  auswahl.innerHTML = Array.from({ length: hoechster + 1 }, (_, i) => i + 1)
+    .map((z) => {
+      const merkmal = z === heute ? ' · heute' : '';
+      const coaching = kd.coachingFaellig(datei, z) ? ' · Coaching' : '';
+      return `<option value="${z}">${z}${merkmal}${coaching}</option>`;
+    })
+    .join('');
+
+  auswahl.value = String(aktuellerZeitraum());
+  $('#zeitraum-heute').hidden = aktuellerZeitraum() === heute;
+}
 
 function anwendungZeigen() {
   $('#einstieg').hidden = true;
@@ -303,10 +332,10 @@ function anwendungZeigen() {
 }
 
 function alesZeichnen() {
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
   const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum).length;
 
-  $('#leiste-zeitraum').textContent = `Zeitraum ${zeitraum}`;
+  zeitraumwahlZeichnen();
   $('#leiste-status').textContent = !datei.lernende.length
     ? 'noch keine Kinder in der Liste'
     : kd.coachingFaellig(datei, zeitraum)
@@ -322,7 +351,7 @@ function alesZeichnen() {
 
 function klassenlisteZeichnen() {
   const ziel = $('#klassenliste');
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
 
   if (!datei.lernende.length) {
     ziel.innerHTML = '<p class="leer">Noch keine Kinder angelegt.</p>';
@@ -378,11 +407,8 @@ function kindZeigen(schuelerId) {
   $('#kind-titel').textContent = kind.name;
   $('#kind-unter').textContent = `${s.name} seit ${datumLang(kind.seit)}`;
 
-  const faellig = kd.coachingFaellig(datei);
   $('#kind-coaching-starten').hidden = false;
-  $('#kind-coaching-starten').textContent = faellig
-    ? 'Coaching-Gespräch führen'
-    : 'Coaching-Gespräch führen (noch nicht fällig)';
+  $('#kind-coaching-starten').textContent = 'Coaching-Gespräch führen';
   $('#kind-coaching-starten').onclick = () => coachingZeigen(kind.id);
 
   bandZeichnen(kind);
@@ -413,7 +439,7 @@ function bandZeichnen(kind) {
 
 /** Alle Zeiträume mit Selbst- und Fremdsicht nebeneinander -- Abweichungen markiert. */
 function zeitraumtabelleZeichnen(kind) {
-  const bisher = kd.zeitraumFuer(datei);
+  const bisher = aktuellerZeitraum();
   const zeilen = [];
 
   for (let z = 1; z <= bisher; z++) {
@@ -514,21 +540,51 @@ function klassenlisteVerdrahten() {
 
 let coachingKind = null;
 
+/** Kinderliste über dem Bogen -- der Einstieg ins Gespräch. */
+function coachingWahlZeichnen() {
+  if (!datei?.lernende.length) {
+    $('#coaching-wahl').innerHTML = '';
+    return;
+  }
+  $('#coaching-wahl').innerHTML = datei.lernende
+    .map((kind) => {
+      const gefuehrt = kd.coachingsVon(datei, kind.id).length;
+      return `<button type="button" class="wahl ${kind.id === coachingKind?.id ? 'aktiv' : ''}"
+                      data-coachingwahl="${kind.id}">${escapen(kind.name)}
+                <span class="wahl-stand">${gefuehrt}</span>
+              </button>`;
+    })
+    .join('');
+
+  for (const knopf of $('#coaching-wahl').querySelectorAll('[data-coachingwahl]')) {
+    knopf.addEventListener('click', () => coachingZeigen(knopf.dataset.coachingwahl));
+  }
+}
+
 function coachingZeigen(schuelerId) {
   coachingKind = datei.lernende.find((l) => l.id === schuelerId);
   if (!coachingKind) return;
 
   for (const a of document.querySelectorAll('.ansicht')) a.hidden = a.id !== 'ansicht-coaching';
-  for (const k of document.querySelectorAll('.navigation button')) k.classList.remove('aktiv');
+  document.querySelector('.navigation button[data-ansicht="coaching"]')?.classList.add('aktiv');
+  for (const k of document.querySelectorAll('.navigation button')) {
+    if (k.dataset.ansicht !== 'coaching') k.classList.remove('aktiv');
+  }
+  coachingWahlZeichnen();
+  $('#coaching-zurueck').hidden = false;
+  for (const id of ['#coaching-titel', '#coaching-unter']) $(id).hidden = false;
 
   const s = stufe(katalog, coachingKind.stufe);
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
   const bloecke = kd.zeitraeumeDesBlocks(datei, zeitraum);
 
   $('#kopf-titel').textContent = 'Coaching-Gespräch';
   $('#coaching-titel').textContent = coachingKind.name;
   $('#coaching-unter').textContent =
     `Aktuell ${s.name} · Zeiträume ${bloecke[0]} bis ${bloecke.at(-1)}`;
+
+  $('#formular-coaching').hidden = false;
+  for (const ueber of document.querySelectorAll('#ansicht-coaching h2')) ueber.hidden = false;
 
   bogenZeichnen(coachingKind, bloecke);
   belegeZeichnen(coachingKind, bloecke);
@@ -711,7 +767,7 @@ function coachingSpeichern() {
   meldung.hidden = true;
   kd.coachingEintragen(datei, {
     schuelerId: coachingKind.id,
-    zeitraum: kd.zeitraumFuer(datei),
+    zeitraum: aktuellerZeitraum(),
     entscheidung,
     begruendung,
     vereinbarungen: $('#coaching-vereinbarungen').value,
@@ -723,6 +779,19 @@ function coachingSpeichern() {
   merken();
   alesZeichnen();
   kindZeigen(coachingKind.id);
+}
+
+/** Coaching-Bereich ohne gewähltes Kind: nur die Auswahl. */
+function coachingBereitZeigen() {
+  coachingKind = null;
+  coachingWahlZeichnen();
+  $('#coaching-zurueck').hidden = true;
+  for (const id of ['#coaching-titel', '#coaching-unter']) $(id).hidden = true;
+  for (const id of ['#coaching-bogen', '#coaching-belege', '#coaching-entscheidung']) {
+    $(id).innerHTML = '';
+  }
+  $('#formular-coaching').hidden = true;
+  for (const ueber of document.querySelectorAll('#ansicht-coaching h2')) ueber.hidden = true;
 }
 
 function kindAnlegen() {
@@ -927,7 +996,7 @@ function fremdZeichnen() {
 
 /** Kind auswählen, dann alle Zeilen dieses Kindes auf einen Blick. */
 function fremdNachKind() {
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
 
   if (!datei.lernende.some((l) => l.id === fremdKindId)) {
     fremdKindId = datei.lernende[0].id;
@@ -974,7 +1043,7 @@ function fremdNachKind() {
 
 /** Ein Kriterium, alle Kinder, die es betrifft. */
 function fremdNachKriterium() {
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
   const zeilen = new Map();
   for (const s of new Set(datei.lernende.map((l) => l.stufe))) {
     for (const z of bewertungszeilen(katalog, s)) zeilen.set(z.id, z);
@@ -1056,7 +1125,7 @@ function rasterVerdrahten() {
 
     kd.einschaetzungSetzen(datei, {
       schuelerId: kind.id,
-      zeitraum: kd.zeitraumFuer(datei),
+      zeitraum: aktuellerZeitraum(),
       quelle: 'fremd',
       // Stufe mitschreiben: später ist sonst nicht mehr erkennbar, gegen
       // welche Anforderungen damals bewertet wurde
@@ -1074,13 +1143,13 @@ function rasterVerdrahten() {
 }
 
 /** Wie viele Zeilen sind für dieses Kind erfasst? */
-function kindstand(kind, zeitraum = kd.zeitraumFuer(datei)) {
+function kindstand(kind, zeitraum = aktuellerZeitraum()) {
   const zeilenIds = bewertungszeilen(katalog, kind.stufe).map((z) => z.id);
   return kd.erfassungsstand(datei, kind.id, zeitraum, 'fremd', zeilenIds);
 }
 
 /** Wie viele der betroffenen Kinder sind für diese Zeile schon eingeschätzt? */
-function zeilenstand(zeileId, zeitraum = kd.zeitraumFuer(datei)) {
+function zeilenstand(zeileId, zeitraum = aktuellerZeitraum()) {
   const betroffen = datei.lernende.filter((k) =>
     bewertungszeilen(katalog, k.stufe).some((x) => x.id === zeileId)
   );
@@ -1092,7 +1161,7 @@ function zeilenstand(zeileId, zeitraum = kd.zeitraumFuer(datei)) {
 
 /** Nur die Zähler auffrischen -- ein Neuzeichnen würde den Fokus verlieren. */
 function staendeAuffrischen() {
-  const zeitraum = kd.zeitraumFuer(datei);
+  const zeitraum = aktuellerZeitraum();
   for (const knopf of document.querySelectorAll('[data-kindwahl], [data-zeilenwahl]')) {
     const stand = knopf.dataset.kindwahl
       ? kindstand(datei.lernende.find((l) => l.id === knopf.dataset.kindwahl), zeitraum)
@@ -1117,6 +1186,7 @@ function navigationVerdrahten() {
       }
       $('#kopf-titel').textContent = knopf.textContent;
       if (knopf.dataset.ansicht === 'import') importErgebnisZeichnen([]);
+      if (knopf.dataset.ansicht === 'coaching') coachingBereitZeigen();
       window.scrollTo({ top: 0 });
     });
   }

@@ -171,7 +171,7 @@ textarea { resize: vertical; }
   margin: 0 0 0.75rem;
 }
 
-.lang { color: var(--text-leise); max-width: 40rem; }
+.lang { color: var(--text-leise); }
 
 .fehler {
   color: var(--warnung);
@@ -334,7 +334,7 @@ button {
 .inhalt {
   max-width: 44rem;
   margin: 0 auto;
-  padding: 1.25rem 1.25rem calc(env(safe-area-inset-bottom) + 6.5rem);
+  padding: 1.25rem 1.25rem 0.5rem;
 }
 
 /* ---------- Ausweis ---------- */
@@ -759,12 +759,22 @@ button {
 
   .gruppentitel { grid-column: 1 / -1; }
   .kriterium { grid-template-columns: 1fr 19rem; gap: 1rem; }
-  .beleg { max-width: 46rem; }
 }
 
 /* Im Querformat stehen die Erklärungen nebeneinander statt untereinander --
    sonst schieben sie die eigentliche Aufgabe aus dem Bild. */
 @media (min-width: 48rem) {
+  /* Der Abschluss nutzt die ganze Breite: Auswahl links, Satz rechts.
+     Untereinander blieb rechts nur Leerraum. */
+  .beleg {
+    display: grid;
+    grid-template-columns: minmax(16rem, 2fr) 3fr;
+    gap: 0 1.25rem;
+    align-items: start;
+  }
+  .beleg-titel { grid-column: 1 / -1; }
+  .beleg .feld { margin: 0.5rem 0 0; }
+
   .hilfen {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -775,4 +785,82 @@ button {
   .hilfen .hilfe { margin-bottom: 0; }
   .hilfen summary { padding: 0.75rem 0.85rem; min-height: 46px; font-size: 0.95rem; }
   .hilfen .hilfe p, .hilfen .hilfe ul { margin-inline: 0.85rem; font-size: 0.95rem; }
+}
+
+/* ---------- Fußzeile ---------- */
+
+.fusszeile {
+  margin-top: 2.5rem;
+  padding: 1.5rem 1.25rem calc(env(safe-area-inset-bottom) + 5.5rem);
+  border-top: 1px solid var(--linie);
+  background: var(--flaeche);
+}
+
+.fusszeile-innen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+.fusszeile-logo {
+  width: 118px;
+  height: auto;
+  flex: none;
+  opacity: 0.9;
+}
+
+.fusszeile-text {
+  flex: 1;
+  min-width: 15rem;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-leise);
+}
+
+.fusszeile-text strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+
+.zur-startseite {
+  flex: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text-leise);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--grund);
+  border: 1px solid var(--linie);
+  border-radius: 20px;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.zur-startseite::before { content: "← "; }
+.zur-startseite:hover { color: var(--text); border-color: var(--text-leise); }
+.zur-startseite:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .zur-startseite { transition: none; } }
+
+@media (prefers-color-scheme: dark) {
+  .fusszeile-logo { padding: 0.25rem 0.4rem; background: #fff; border-radius: 7px; }
+}
+
+/* schmal: gestapelt und mittig */
+@media (max-width: 34rem) {
+  .fusszeile-innen { flex-direction: column; text-align: center; }
+  .fusszeile-text { min-width: 0; }
+}
+
+.fusszeile-klein {
+  margin: 1.5rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-leise);
 }

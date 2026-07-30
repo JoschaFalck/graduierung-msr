@@ -4,7 +4,8 @@
 app/                       ← dieser Ordner wird als Website veröffentlicht
   index.html                 Startseite mit den beiden Eingängen
   sw.js                      Service Worker (offline-Betrieb)
-  symbole/                   App-Symbole (Anker)
+  symbole/                   App-Symbole (Anker) und Schullogo
+  bilder/                    Titelbild der Startseite (zwei Auflösungen)
   gemeinsam/
     beispieldaten.js         erfundene Klasse zum Ausprobieren (Beispielmodus)
     katalog.json           ← einzige Datenquelle: Stufen, Kriterien, Privilegien, Rückstufungstexte
@@ -138,13 +139,27 @@ dreispaltig -- die Erfassung bleibt bewusst einspaltig, damit der Blick beim Dur
 
 Beide zeigen an jedem Eintrag den Stand (`3/5` oder ✓), damit nichts unbemerkt offen bleibt.
 
+## Zeitraum frei wählbar
+
+Oben in der Leiste steht ein Auswahlfeld statt einer festen Anzeige. Vorbelegt ist der Zeitraum,
+in den heute fällt (mit „· heute" markiert, Coaching-Termine mit „· Coaching"). Er lässt sich
+umstellen -- für nachgetragene Runden, ausgelassene Wochen oder vorgezogene Gespräche. Der
+gewählte Zeitraum gilt überall: Fremdeinschätzung, Übersicht und der Coaching-Block richten
+sich danach. `aktuellerZeitraum()` in `lehrkraft.js` ist die einzige Quelle dafür.
+
+## Anleitung
+
+Zwei Fassungen: eine aufklappbare Kurzfassung mit sechs Schritten auf der Einstiegsseite
+(vor dem Öffnen einer Klasse) und der Navigationspunkt *Anleitung* mit der ausführlichen
+Fassung inklusive Speicher- und Sicherungshinweisen.
+
 ## Datei sichern
 
-Eigener Bereich in der Navigation: **Jetzt sichern** (schreibt sofort zurück, passiert sonst
-automatisch 0,8 s nach der letzten Änderung), **Kopie speichern unter …** (zusätzliche Ablage
-für Stick oder Backup, mit Datum im Dateinamen -- die Arbeitsdatei bleibt, wo sie ist) und
-**Sichern und schließen**. Dazu die Kennzahlen der Klasse und wo die Datei liegt.
-Im Beispielmodus sind Sichern und Kopie gesperrt.
+Eigener Bereich in der Navigation, bewusst schlank: eine Hinweiszeile und zwei Knöpfe über die
+volle Breite -- **Klassendaten lokal sichern** (eigene Sicherung mit Datum im Dateinamen; die
+Arbeitsdatei bleibt, wo sie ist) und **Klasse schließen**. Darunter die Kennzahlen der Klasse.
+Automatisch gesichert wird ohnehin 0,8 s nach der letzten Änderung. Im Beispielmodus ist das
+Sichern gesperrt.
 
 ## Der Coaching-Bogen
 
