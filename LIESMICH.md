@@ -124,11 +124,19 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
 
 ## Startseite
 
-Schmaler Bildstreifen oben (96--150 px hoch), darunter Titel, Schullogo und die beiden Eingänge.
+Titelbild oben, darunter Titel, Schullogo und die beiden Eingänge. Ab 34 rem stehen die
+Eingänge nebeneinander.
+
+Bild, Inhalt und Fußzeile teilen sich über die Klasse `.bahn` dieselbe Breite (`min(52rem, 100%)`).
+Bis 52 rem läuft das Bild also randlos über den ganzen Bildschirm, darüber steht es mittig.
+Das Bild behält per `aspect-ratio: 4 / 1` immer sein Seitenverhältnis und wird **nie**
+beschnitten. Eine feste Höhe (früher `height: clamp(110px, 13vw, 180px)`) darf dort nicht
+zurückkommen -- sie ergibt ein Verhältnis um 7,7:1 und schneidet mit `object-fit: cover`
+rund die Hälfte des Motivs weg.
 
 **Das Bild austauschen:** `bilder/header.jpg` (1600 x 400) und `bilder/header-gross.jpg`
-(2400 x 600) ersetzen, beide im Seitenverhältnis **4:1**. Dann sitzt der Ausschnitt ohne
-Beschneiden. Das Original der aktuellen Grafik liegt außerhalb des Repos unter
+(2400 x 600) ersetzen, beide im Seitenverhältnis **4:1**. Bei einem anderen Verhältnis auch
+`aspect-ratio` in `index.html` anpassen. Das Original der aktuellen Grafik liegt außerhalb des Repos unter
 `Graduierung-App/Bildquellen/header-original.png`. Nach einem Austausch die `FASSUNG` in
 `sw.js` hochzählen, sonst zeigen bereits geöffnete Geräte das alte Bild.
 
