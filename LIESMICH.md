@@ -124,21 +124,28 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
 
 ## Startseite
 
-Titelbild oben, darunter Titel, Schullogo und die beiden Eingänge. Ab 34 rem stehen die
+Titelbild oben mit dem Schullogo in der rechten oberen Ecke (dieselbe Stelle wie in der
+Schüleranwendung), darunter der Titel und die beiden Eingänge. Ab 34 rem stehen die
 Eingänge nebeneinander.
+
+Die Seite ist darauf ausgelegt, **ohne Scrollen** sichtbar zu sein. `body` ist eine
+Flex-Spalte über die volle Fensterhöhe; `main` bekommt `flex: 1` und verteilt übrigen
+Platz gleichmäßig, statt den Inhalt oben kleben zu lassen. `.titelbild` und `footer`
+stehen deshalb auf `flex: none` -- sonst würde die Spalte das Bild stauchen, sobald der
+Inhalt einmal höher wird als das Fenster.
 
 Das Titelbild läuft randlos über die volle Breite. Es behält per `aspect-ratio: 4 / 1`
 sein Seitenverhältnis und wird deshalb **nicht** beschnitten. Eine feste Höhe (früher
 `height: clamp(110px, 13vw, 180px)`) darf dort nicht zurückkommen -- sie ergibt ein
 Verhältnis um 7,7:1 und schneidet mit `object-fit: cover` rund die Hälfte des Motivs weg.
 
-Einzige Ausnahme ist `max-height: 430px`. Sie greift erst jenseits von 1720 px
-Fensterbreite, damit der Streifen auf sehr großen Bildschirmen nicht die halbe Seite
-einnimmt. `object-position: center bottom` sorgt dort dafür, dass ausschließlich oben
+Einzige Ausnahme ist `max-height: min(430px, 45vh)`: die 430 px greifen jenseits von
+1720 px Fensterbreite, die 45 vh in flachen Fenstern. Beides hält die Seite ohne Scrollen
+sichtbar. `object-position: center bottom` sorgt dort dafür, dass ausschließlich oben
 Himmel wegfällt -- Kai, Anker, Boje und Segelboot bleiben vollständig.
 
 Inhalt und Fußzeile teilen sich darunter über die Klasse `.bahn` dieselbe Breite
-(`min(52rem, 100%)`).
+(`min(60rem, 100%)`).
 
 **Das Bild austauschen:** `bilder/header.jpg` (1600 x 400) und `bilder/header-gross.jpg`
 (2400 x 600) ersetzen, beide im Seitenverhältnis **4:1**. Bei einem anderen Verhältnis auch
