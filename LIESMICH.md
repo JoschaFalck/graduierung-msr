@@ -189,8 +189,25 @@ Fassung inklusive Speicher- und Sicherungshinweisen.
 Eigener Bereich in der Navigation, bewusst schlank: eine Hinweiszeile und zwei Knöpfe über die
 volle Breite -- **Klassendaten lokal sichern** (eigene Sicherung mit Datum im Dateinamen; die
 Arbeitsdatei bleibt, wo sie ist) und **Klasse schließen**. Darunter die Kennzahlen der Klasse.
-Automatisch gesichert wird ohnehin 0,8 s nach der letzten Änderung. Im Beispielmodus ist das
-Sichern gesperrt.
+Im Beispielmodus ist das Sichern gesperrt.
+
+### Automatisch oder von Hand
+
+`schreibtStillZurueck()` entscheidet das: Automatisch gesichert wird **nur** mit einem
+beschreibbaren Dateigriff (0,8 s nach der letzten Änderung). Fehlt er, fiele `speichern()` auf
+einen Download zurück -- bei dieser Taktung entstünde pro Änderung eine neue Datei, nach einem
+Klassendurchgang rund 70 Stück `Klasse-8b-2026-27 (37).gradu`, und welche die aktuelle ist,
+wüsste niemand mehr. Betrifft **Safari immer** und Chrome dann, wenn der Speicherort-Dialog
+abgebrochen wurde.
+
+Dort tritt an die Stelle der Statusanzeige in der Leiste der Knopf **Sichern (n)** mit der Zahl
+der offenen Änderungen. Weil sein Klick eine echte Nutzergeste ist, darf `speichern()` von dort
+aus auch den Speicherort erfragen -- klappt das, wird ab dann wieder automatisch gesichert.
+Der Hinweistext im Datei-Bereich (`#datei-modus`) beschreibt jeweils den geltenden Weg.
+
+`offeneAenderungen` zählt die Änderungen; `gesichertFertig()` zieht nach dem Schreiben nur ab,
+was auch in der Datei gelandet ist -- währenddessen kann weitergetippt worden sein. Die Warnung
+beim Verlassen der Seite hängt an diesem Zähler.
 
 ## Der Coaching-Bogen
 

@@ -175,6 +175,9 @@ async function speichern({ neuerOrt = false } = {}) {
     gesichertZeigen(true);
     return true;
   }
+  // Was jetzt offen ist, steckt gleich in den Bytes. Während des Schreibens
+  // kann weitergetippt werden -- das darf hinterher nicht als gesichert gelten.
+  const standVorher = offeneAenderungen;
   const bytes = await verschluesseln(datei, passwort);
   const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}.gradu`;
 
@@ -189,35 +192,96 @@ async function speichern({ neuerOrt = false } = {}) {
       const strom = await griff.createWritable();
       await strom.write(bytes);
       await strom.close();
-      gesichertZeigen(true);
+      gesichertFertig(standVorher);
       return true;
     } catch (fehler) {
-      if (fehler.name === 'AbortError') return false;
+      if (fehler.name === 'AbortError') {
+        gesichertZeigen(false); // Zähler bleibt stehen, nichts wurde geschrieben
+        return false;
+      }
     }
   }
 
   herunterladen(bytes, name);
-  gesichertZeigen(true);
+  gesichertFertig(standVorher);
   return true;
 }
 
+/** Nach erfolgreichem Schreiben: nur abziehen, was auch in der Datei gelandet ist. */
+function gesichertFertig(standVorher) {
+  offeneAenderungen = Math.max(0, offeneAenderungen - standVorher);
+  gesichertZeigen(offeneAenderungen === 0);
+}
+
 let sicherungLaeuft = null;
+let offeneAenderungen = 0;
+
+/**
+ * Schreibt speichern() ohne Rückfrage in die Arbeitsdatei?
+ *
+ * Nur dann darf automatisch gesichert werden. Ohne beschreibbaren Griff fällt
+ * speichern() auf herunterladen() zurück -- bei 0,8 s Taktung entstünde dann
+ * pro Änderung eine neue Datei. Ein Klassendurchgang (14 Kinder x 5 Zeilen)
+ * hinterließe rund 70 Stück „Klasse-8b-2026-27 (37).gradu" im Downloads-Ordner,
+ * und welche davon die aktuelle ist, wüsste niemand mehr. Betrifft Safari
+ * immer und Chrome dann, wenn der Speicherort-Dialog abgebrochen wurde.
+ *
+ * Beispieldaten zählen mit: dort steigt speichern() sofort aus, es entsteht
+ * also ohnehin keine Datei.
+ */
+function schreibtStillZurueck() {
+  return !!datei?.beispiel || !!griff?.createWritable;
+}
+
 /** Sammelt schnelle Änderungen und speichert gebündelt. */
 function merken() {
+  offeneAenderungen++;
   gesichertZeigen(false);
   clearTimeout(sicherungLaeuft);
+  if (!schreibtStillZurueck()) return; // dort sichert der Knopf in der Leiste
   sicherungLaeuft = setTimeout(() => speichern(), 800);
 }
 
+/**
+ * Zeigt den Speicherzustand -- als stille Anzeige, wo automatisch gesichert
+ * wird, sonst als Knopf mit der Zahl der offenen Änderungen.
+ */
 function gesichertZeigen(fertig) {
+  if (fertig) offeneAenderungen = 0;
+
   const feld = $('#gesichert');
-  feld.textContent = fertig ? 'gesichert' : 'ändert …';
-  feld.dataset.zustand = fertig ? 'fertig' : 'offen';
+  const knopf = $('#jetzt-sichern');
+  const vonHand = !schreibtStillZurueck();
+
+  feld.hidden = vonHand;
+  knopf.hidden = !vonHand;
+
+  if (vonHand) {
+    knopf.textContent = offeneAenderungen
+      ? `Sichern (${offeneAenderungen})`
+      : 'gesichert';
+    knopf.disabled = !offeneAenderungen;
+  } else {
+    feld.textContent = fertig ? 'gesichert' : 'ändert …';
+    feld.dataset.zustand = fertig ? 'fertig' : 'offen';
+  }
 }
 
 // ---------------------------------------------------------------- Datei-Bereich
 
 function dateiVerdrahten() {
+  // Sichern von Hand. Der Klick ist eine echte Nutzergeste -- deshalb darf
+  // speichern() hier auch den Speicherort erfragen, wenn noch keiner feststeht.
+  // Klappt das, wird ab dann wieder automatisch gesichert.
+  $('#jetzt-sichern').addEventListener('click', async () => {
+    const knopf = $('#jetzt-sichern');
+    knopf.disabled = true;
+    knopf.textContent = 'sichert …';
+    clearTimeout(sicherungLaeuft);
+    await speichern();
+    gesichertZeigen(offeneAenderungen === 0);
+  });
+
   // Bewusst ohne den gemerkten Griff: die Kopie soll woanders liegen,
   // die Arbeitsdatei bleibt, wo sie ist.
   $('#datei-kopie').addEventListener('click', async () => {
@@ -295,6 +359,15 @@ function dateiAngabenZeichnen() {
 
   // Im Beispielmodus wäre Sichern irreführend
   $('#datei-kopie').disabled = !!datei.beispiel;
+
+  $('#datei-modus').textContent = schreibtStillZurueck()
+    ? 'Änderungen werden automatisch gesichert, solange diese Klasse geöffnet ist. ' +
+      'Lege am Ende der Bearbeitung trotzdem eine eigene Sicherung ab – dann liegen die ' +
+      'Klassendaten unabhängig von Browser und Gerät bei dir.'
+    : 'Dieser Browser kann nicht direkt in die Klassendatei schreiben, deshalb wird hier ' +
+      'nicht automatisch gesichert. Oben in der Leiste steht, wie viele Änderungen offen ' +
+      'sind – ein Klick darauf legt sie als Datei ab, die du über die bisherige speicherst. ' +
+      'In Chrome entfällt dieser Schritt.';
 }
 
 // ---------------------------------------------------------------- Anwendung
@@ -328,6 +401,7 @@ function anwendungZeigen() {
   $('#beispielleiste').hidden = !datei.beispiel;
   $('#kopf-klasse').textContent = datei.klasse;
   $('#kopf-schuljahr').textContent = datei.schuljahr;
+  gesichertZeigen(offeneAenderungen === 0); // legt Anzeige oder Knopf fest
   alesZeichnen();
 }
 
@@ -1199,7 +1273,7 @@ function escapen(text) {
 }
 
 window.addEventListener('beforeunload', (e) => {
-  if (datei && !datei.beispiel && $('#gesichert').dataset.zustand === 'offen') e.preventDefault();
+  if (datei && !datei.beispiel && offeneAenderungen) e.preventDefault();
 });
 
 starten();

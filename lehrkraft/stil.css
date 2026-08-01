@@ -136,6 +136,19 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 .gesichert { font-size: 0.85rem; color: var(--text-leise); }
 .gesichert[data-zustand="offen"] { color: var(--mittel); }
 
+/* Sichern von Hand: solange Änderungen offen sind, ist der Knopf farbig und
+   nennt ihre Zahl. Ist alles gesichert, sieht er aus wie die Statusanzeige
+   daneben -- dann gibt es nichts zu tun. */
+.jetzt-sichern {
+  font: inherit; font-size: 0.85rem; cursor: pointer;
+  padding: 0.25rem 0.7rem; border-radius: 8px;
+  color: #fff; background: var(--stufe); border: 1px solid transparent;
+}
+.jetzt-sichern:disabled {
+  cursor: default; color: var(--text-leise);
+  background: none; border-color: transparent;
+}
+
 .inhalt { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1.5rem 0.5rem; }
 .werkzeuge { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 

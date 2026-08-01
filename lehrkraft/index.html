@@ -107,6 +107,10 @@
     <span id="leiste-status" class="leiste-status">–</span>
     <span class="leiste-fuell"></span>
     <span class="gesichert" id="gesichert">gesichert</span>
+    <!-- Nur sichtbar, wo nicht direkt in die Arbeitsdatei geschrieben werden kann
+         (Safari, oder Chrome ohne gewählten Speicherort). Dort wird bewusst nicht
+         automatisch gesichert -- siehe merken() in lehrkraft.js. -->
+    <button type="button" class="jetzt-sichern" id="jetzt-sichern" hidden>gesichert</button>
   </div>
 
   <main class="inhalt">
@@ -218,9 +222,9 @@
 
     <!-- Datei -->
     <section class="ansicht" id="ansicht-datei" hidden>
-      <p class="lang">Änderungen werden automatisch gesichert, solange diese Klasse geöffnet ist.
-        Lege am Ende der Bearbeitung trotzdem eine eigene Sicherung ab – dann liegen die
-        Klassendaten unabhängig von Browser und Gerät bei dir.</p>
+      <p class="lang" id="datei-modus">Änderungen werden automatisch gesichert, solange diese
+        Klasse geöffnet ist. Lege am Ende der Bearbeitung trotzdem eine eigene Sicherung ab –
+        dann liegen die Klassendaten unabhängig von Browser und Gerät bei dir.</p>
 
       <div class="knopfreihe">
         <button type="button" class="knopf-gross" id="datei-kopie">Klassendaten lokal sichern</button>
@@ -290,10 +294,11 @@
         Gespräche, die du vorziehst. „zurück zu heute“ bringt dich wieder in die Gegenwart.</p>
 
       <h2>Speichern und Sichern</h2>
-      <p class="lang">Änderungen werden automatisch gesichert, solange die Klasse geöffnet ist.
-        In Chrome schreibt die Anwendung dabei direkt in die Datei, die du beim Anlegen gewählt
-        hast; in Safari kommt stattdessen jedes Mal ein Download. <strong>Deshalb die Empfehlung:
-        Chrome benutzen.</strong></p>
+      <p class="lang">In Chrome schreibt die Anwendung direkt in die Datei, die du beim Anlegen
+        gewählt hast – automatisch, kurz nach jeder Änderung. Safari kann das nicht. Dort wird
+        deshalb <em>nicht</em> automatisch gesichert; stattdessen steht oben in der Leiste ein
+        Knopf mit der Zahl der offenen Änderungen, und ein Klick darauf legt die Datei ab, die
+        du über die bisherige speicherst. <strong>Deshalb die Empfehlung: Chrome benutzen.</strong></p>
       <p class="lang">Unter <em>Datei</em> legst du am Ende einer Sitzung zusätzlich eine eigene
         Sicherung ab – die Datei trägt das Datum im Namen und liegt dann unabhängig von Browser
         und Gerät bei dir. Sie ist verschlüsselt, also auch auf einem Stick oder in einem Backup
