@@ -21,11 +21,12 @@
     font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
 
-  /* Titelbild: definierter Streifen oben, Ausschnitt hält die Stufennamen im Bild */
-  .titelbild { border-bottom: 1px solid var(--linie); }
+  /* Schmaler Bildstreifen. Das Bild sollte im Seitenverhältnis etwa 4:1 angelegt
+     sein, dann sitzt der Ausschnitt ohne Beschneiden. */
+  .titelbild { border-bottom: 1px solid var(--linie); background: var(--flaeche); }
   .titelbild img {
-    display: block; width: 100%; height: clamp(150px, 18vw, 230px);
-    object-fit: cover; object-position: center 16%;
+    display: block; width: 100%; height: clamp(110px, 13vw, 180px);
+    object-fit: cover; object-position: center 62%;
   }
 
   main { width: min(30rem, 100%); margin: 0 auto; padding: 2rem 1.5rem 0;
@@ -57,10 +58,10 @@
 
 <header class="titelbild">
   <img src="bilder/header.jpg"
-       srcset="bilder/header.jpg 1200w, bilder/header-gross.jpg 1800w"
+       srcset="bilder/header.jpg 1600w, bilder/header-gross.jpg 2400w"
        sizes="100vw"
-       alt="Die vier Ausweiskarten: Hafen, Ankerplatz, Boie und Freie See"
-       width="1200" height="564">
+       alt=""
+       width="1600" height="400">
 </header>
 
 <main>

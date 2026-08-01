@@ -124,10 +124,13 @@ Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
 
 ## Startseite
 
-Titelbild als Streifen oben (`bilder/header.jpg`, zwei Auflösungen über `srcset`), darunter
-Titel, Schullogo und die beiden Eingänge. Der Bildausschnitt ist bewusst nach oben gesetzt
-(`object-position: center 16%`) -- die Stufennamen auf den Karten sind die Botschaft und dürfen
-nicht abgeschnitten werden.
+Schmaler Bildstreifen oben (96--150 px hoch), darunter Titel, Schullogo und die beiden Eingänge.
+
+**Das Bild austauschen:** `bilder/header.jpg` (1600 x 400) und `bilder/header-gross.jpg`
+(2400 x 600) ersetzen, beide im Seitenverhältnis **4:1**. Dann sitzt der Ausschnitt ohne
+Beschneiden. Das Original der aktuellen Grafik liegt außerhalb des Repos unter
+`Graduierung-App/Bildquellen/header-original.png`. Nach einem Austausch die `FASSUNG` in
+`sw.js` hochzählen, sonst zeigen bereits geöffnete Geräte das alte Bild.
 
 ## Layout
 
