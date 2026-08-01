@@ -5,11 +5,12 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
   index.html                 Startseite mit den beiden Eingängen
   sw.js                      Service Worker (offline-Betrieb)
   symbole/                   App-Symbole (Anker) und Schullogo
-  bilder/                    Titelbild der Startseite (zwei Auflösungen)
+  bilder/                    Titelbild der Startseite, Stufenbilder, freigestellte Motive
+    stufen/                  Bild je Lernstufe für den Ausweis (3:1)
   gemeinsam/
     beispieldaten.js         erfundene Klasse zum Ausprobieren (Beispielmodus)
     katalog.json           ← einzige Datenquelle: Stufen, Kriterien, Privilegien, Rückstufungstexte
-    katalog.js               Laden, Stufenvererbung, Sammelzeilen, Rückstufungsbogen
+    katalog.js               Laden, Stufenvererbung, Sammelzeilen, Stufenwechsel, Rückstufungsbogen
     uebergabe.js             Format der Datei Kind → Lehrkraft (erzeugen, benennen, prüfen)
     tresor.js                Verschlüsselung der Klassendatei (AES-GCM, PBKDF2)
     klassendatei.js          Datenmodell: Lernende, Zeiträume, Einschätzungen, Import
@@ -24,7 +25,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                72 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                74 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -153,6 +154,32 @@ Inhalt und Fußzeile teilen sich darunter über die Klasse `.bahn` dieselbe Brei
 `Graduierung-App/Bildquellen/header-original.png`. Nach einem Austausch die `FASSUNG` in
 `sw.js` hochzählen, sonst zeigen bereits geöffnete Geräte das alte Bild.
 
+## Bilder
+
+| Datei | Wo | Format |
+|---|---|---|
+| `bilder/header.jpg` | Startseite | 4:1, randlos |
+| `bilder/stufen/<stufe>.jpg` | Ausweiskarte, je nach Stufe | 3:1, als Band beschnitten |
+| `bilder/einstieg-lehrkraft.jpg` | Kopf der Einstiegskarte | 2:1, als Band beschnitten |
+| `bilder/leer-verlauf.png` | Schüler: noch keine Einschätzung | freigestellt |
+| `bilder/gesendet.png` | Schüler: nach dem Absenden | freigestellt |
+| `bilder/leer-klasse.png` | Lehrkraft: noch keine Kinder | freigestellt |
+| `bilder/leer-coaching.png` | Lehrkraft: noch kein Gespräch | freigestellt |
+| `bilder/alles-da.png` | Lehrkraft: alle Abgaben da | freigestellt |
+
+Alle Bilder sind **schmückend** (`alt=""`); ihre Aussage steht immer auch als Text daneben.
+Die freigestellten Motive teilen sich die Klasse `.leer-bild`, die in beiden Stylesheets steht;
+im Druckbogen wird sie ausgeblendet.
+
+**Anders als beim Titelbild ist bei den Bändern ein Beschnitt gewollt**: Die Ausweiskarte wird
+auf dem iPad quer über 1000 px breit, ein volles 3:1-Bild wäre dort fast 400 px hoch. Deshalb
+feste Bandhöhe (`height: clamp(...)`) statt `aspect-ratio` -- die beiden zusammen ziehen
+ausserdem die Breite mit, und rechts bliebe ein weisser Streifen.
+
+Die Prompts, aus denen die Bilder entstanden sind, stehen in `Graduierung-App/BILDPROMPTS.md`,
+die Originale in `Graduierung-App/Bildquellen/`. Neue Bilder gehören in den `VORRAT` in `sw.js`,
+sonst fehlen sie auf bereits geöffneten Geräten.
+
 ## Layout
 
 Beide Anwendungen sind für das **iPad im Querformat** ausgelegt. Ab 48 rem Breite steht die
@@ -175,8 +202,14 @@ Beide zeigen an jedem Eintrag den Stand (`3/5` oder ✓), damit nichts unbemerkt
 Oben in der Leiste steht ein Auswahlfeld statt einer festen Anzeige. Vorbelegt ist der Zeitraum,
 in den heute fällt (mit „· heute" markiert, Coaching-Termine mit „· Coaching"). Er lässt sich
 umstellen -- für nachgetragene Runden, ausgelassene Wochen oder vorgezogene Gespräche. Der
-gewählte Zeitraum gilt überall: Fremdeinschätzung, Übersicht und der Coaching-Block richten
-sich danach. `aktuellerZeitraum()` in `lehrkraft.js` ist die einzige Quelle dafür.
+gewählte Zeitraum gilt **überall**: Fremdeinschätzung, Übersicht, Coaching-Block und die
+Fehlliste unter *Einsammeln*, die ihn auch in der Überschrift nennt. `aktuellerZeitraum()` in
+`lehrkraft.js` ist die einzige Quelle dafür -- `kd.fehlendeSelbsteinschaetzungen(datei)` ohne
+zweites Argument fällt auf den heutigen Zeitraum zurück und gehört deshalb nirgends hin.
+
+Die Statuszeile daneben zeigt fehlende Abgaben **und** einen anstehenden Coaching-Termin
+nebeneinander. Vorher verdeckte der Coaching-Hinweis die Zahl der Fehlenden, und das
+ausgerechnet im Zeitraum, in dem sie am meisten zählt.
 
 ## Anleitung
 
@@ -209,6 +242,52 @@ Der Hinweistext im Datei-Bereich (`#datei-modus`) beschreibt jeweils den geltend
 was auch in der Datei gelandet ist -- währenddessen kann weitergetippt worden sein. Die Warnung
 beim Verlassen der Seite hängt an diesem Zähler.
 
+### Nie zwei Schreibvorgänge gleichzeitig
+
+`speichern()` reiht die Aufrufe an `schreibvorgang` auf und ruft erst dann `dateiSchreiben()`.
+Ohne diese Kette könnte die nächste Änderung einen zweiten Schreibstrom auf dieselbe Datei
+öffnen, während der erste noch läuft -- das Ergebnis wäre eine halb geschriebene Klassendatei,
+und die ist verschlüsselt, also nicht von Hand zu retten.
+
+### Der Tresor
+
+`tresor.js` gibt nicht mehr Passphrasen entgegen, sondern einen **Tresor**: Salz plus den daraus
+abgeleiteten Schlüssel.
+
+- `tresorAnlegen(passphrase)` -- neue Klasse: frisches Salz, Schlüssel ableiten
+- `tresorOeffnen(bytes, passphrase)` -- `{ tresor, inhalt }`; das Salz der Datei wird übernommen
+- `verschluesseln(objekt, tresor)` -- neuer IV, kein erneutes Ableiten
+
+Grund: Die Ableitung kostet 250.000 PBKDF2-Runden. Gemessen im Browser sind das rund 55 ms
+einmalig gegenüber 0--3 ms je Speichervorgang danach -- vorher fielen die 55 ms bei **jeder**
+Änderung an, bei einem Klassendurchgang also dutzende Male.
+
+Dass das Salz je Datei gleich bleibt, ist unbedenklich: Es schützt gegen vorberechnete Tabellen
+über verschiedene Passwörter und Dateien hinweg, dafür genügt ein Zufallswert je Datei. Frisch
+sein muss bei AES-GCM der **IV**, und der wird weiterhin bei jeder Verschlüsselung neu gezogen.
+Eine Prüfung in `pruefen.mjs` sichert genau das ab.
+
+Nebeneffekt: Die Passphrase steht nach dem Öffnen nirgends mehr. `lehrkraft.js` hält statt
+`passwort` nur noch den Tresor, dessen Schlüssel nicht auslesbar ist (`extractable: false`),
+und leert das Eingabefeld. Ein Passwortwechsel ist damit weiterhin nicht vorgesehen.
+
+## Eine Wahrheit je Sache
+
+`katalog.json` ist die Datenquelle, `katalog.js` die einzige Stelle, die sie auswertet.
+Es gab dort drei Doppelungen, die jetzt weg sind -- sie liefen auseinander, sobald jemand
+den Katalog ändert:
+
+| Frage | Zuständig |
+|---|---|
+| Welche Stufe kommt nach einer Entscheidung? | `stufeNachEntscheidung()` |
+| Welche Stufe liegt darüber/darunter? | `nachbarStufe()` |
+| „im Hafen", „an der Boie", … | `praeposition()` |
+| Welche Rückstufungsgründe gelten? | `rueckstufungsgruende()` |
+
+`klassendatei.js` kennt den Katalog bewusst nicht. `coachingEintragen()` bekommt die Zielstufe
+deshalb als Angabe `nachStufe` vom Aufrufer -- vorher stand dort eine zweite, hart verdrahtete
+Stufenkette `['hafen', 'ankerplatz', 'boie', 'freie-see']`.
+
 ## Der Coaching-Bogen
 
 Eine Besonderheit steckt darin: Das Kind kreuzt **Einzelkriterien** an, die Lehrkraft die
@@ -230,8 +309,14 @@ und unter das Formular kommt eine Unterschriftenzeile.
   unter …" gibt es, ein automatischer Rhythmus fehlt noch
 - Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)
 
-**Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind)
-oder aus den ersten Selbsteinschätzungen. Unbekannte Namen werden nie still angelegt --
+**Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind),
+über *+ Kind hinzufügen* oder aus den ersten Selbsteinschätzungen. In allen drei Wegen gilt
+dieselbe Regel gegen Dubletten: ein bereits vorhandener Name (auch in anderer Schreibweise)
+wird abgewiesen, ein ähnlicher löst eine Rückfrage aus. Sonst entstünden zwei Einträge zum
+selben Kind, und `lernendeSuchen()` fände danach immer nur den ersten -- der zweite bekäme nie
+eine Selbsteinschätzung zugeordnet.
+
+Unbekannte Namen aus Importen werden nie still angelegt --
 sie landen unter „Bitte entscheiden" mit den Möglichkeiten *neu anlegen*, *zuordnen*
 (mit Vorschlag ähnlicher Namen gegen Tippfehler) oder *verwerfen*. Beim Erstaufbau,
 wenn alle Namen neu sind, gibt es einen Sammelknopf für die ganze Klasse.

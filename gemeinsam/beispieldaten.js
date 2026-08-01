@@ -2,7 +2,7 @@
 // ohne echte Kinderdaten anzulegen. Bewusst deterministisch: derselbe Aufruf
 // erzeugt immer dieselbe Klasse, sonst sieht man bei jedem Öffnen etwas anderes.
 
-import { kriterienDerStufe, bewertungszeilen } from './katalog.js';
+import { kriterienDerStufe, bewertungszeilen, stufeNachEntscheidung } from './katalog.js';
 import {
   klasseAnlegen, lernendeAnlegen, einschaetzungSetzen, coachingEintragen,
 } from './klassendatei.js';
@@ -123,6 +123,7 @@ export function beispielklasse(katalog, bloecke = 3) {
           schuelerId: kind.id,
           zeitraum,
           entscheidung,
+          nachStufe: stufeNachEntscheidung(katalog, kind.stufe, entscheidung),
           datum: datumFuerZeitraum(datei, zeitraum),
           gueltigAb: datumFuerZeitraum(datei, zeitraum),
           begruendung: entscheidung === 'gleich' ? BEGRUENDUNGEN.gleich : '',

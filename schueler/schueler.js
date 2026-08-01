@@ -242,6 +242,12 @@ function ausweisZeichnen() {
   symbol.src = `../symbole/stufen/${meine.id}.png`;
   symbol.alt = ''; // rein schmückend -- der Stufenname steht daneben
 
+  // Das Bild der eigenen Stufe: vom geschützten Hafen bis auf die freie See.
+  // Ebenfalls schmückend, der Stufenname steht direkt darunter.
+  const bild = $('#ausweis-bild');
+  bild.src = `../bilder/stufen/${meine.id}.jpg`;
+  bild.alt = '';
+
   $('#liste-privilegien').innerHTML = katalog.stufen
     .filter((s) => s.reihenfolge <= meine.reihenfolge)
     .flatMap((s) => s.privilegien)
@@ -487,7 +493,8 @@ function verlaufZeichnen() {
 
   if (!liste.length) {
     ziel.innerHTML =
-      '<p class="leer">Noch nichts da.<br>Deine erste Selbsteinschätzung erscheint hier.</p>';
+      '<p class="leer"><img class="leer-bild" src="../bilder/leer-verlauf.png" alt="" ' +
+      'width="512" height="341">Noch nichts da.<br>Deine erste Selbsteinschätzung erscheint hier.</p>';
     return;
   }
 

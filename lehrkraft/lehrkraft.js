@@ -5,9 +5,10 @@
 
 import {
   katalogLaden, stufe, bewertungszeilen, kriterienDerStufe, zeilenwert,
+  praeposition, nachbarStufe, stufeNachEntscheidung, rueckstufungsgruende,
 } from '../gemeinsam/katalog.js';
 import { uebergabePruefen } from '../gemeinsam/uebergabe.js';
-import { verschluesseln, entschluesseln, passphraseGuete } from '../gemeinsam/tresor.js';
+import { verschluesseln, tresorAnlegen, tresorOeffnen, passphraseGuete } from '../gemeinsam/tresor.js';
 import * as kd from '../gemeinsam/klassendatei.js';
 
 const $ = (a) => document.querySelector(a);
@@ -15,7 +16,8 @@ const SCHLUESSEL_GRIFF = 'graduierung.lehrkraft.dateigriff';
 
 let katalog;
 let datei = null;      // die entschlüsselte Klassendatei
-let passwort = null;   // nur im Arbeitsspeicher, nie gespeichert
+let tresor = null;     // Salz + Schlüssel, nur im Arbeitsspeicher; der Schlüssel
+                       // ist nicht auslesbar, die Passphrase steht nirgends
 let griff = null;      // FileSystemFileHandle, wo der Browser das kann
 let zeileAktiv = null; // gewählte Zeile der Fremdeinschätzung
 let offeneImporte = []; // Namen, die noch zugeordnet werden müssen
@@ -79,7 +81,7 @@ function einstiegVerdrahten() {
   $('#beispiel-oeffnen').addEventListener('click', async () => {
     const { beispielklasse } = await import('../gemeinsam/beispieldaten.js');
     datei = beispielklasse(katalog);
-    passwort = null;
+    tresor = null;
     griff = null;
     offeneImporte = [];
     anwendungZeigen();
@@ -119,7 +121,7 @@ async function klasseAnlegen() {
 
   datei = kd.klasseAnlegen({ klasse, schuljahr, zyklusStart: start, katalogVersion: katalog.version });
   kd.lernendeAusListe(datei, $('#neu-namen').value, katalog.stufen[0].id);
-  passwort = pw;
+  tresor = await tresorAnlegen(pw);
   griff = null;
   if (await speichern({ neuerOrt: true })) anwendungZeigen();
 }
@@ -155,9 +157,10 @@ async function dateiOeffnen() {
   const meldung = $('#oeffnen-fehler');
   try {
     const roh = griff._datei ?? (await griff.getFile());
-    const inhalt = kd.pruefen(await entschluesseln(await roh.arrayBuffer(), $('#oeffnen-passwort').value));
-    datei = inhalt;
-    passwort = $('#oeffnen-passwort').value;
+    const geoeffnet = await tresorOeffnen(await roh.arrayBuffer(), $('#oeffnen-passwort').value);
+    datei = kd.pruefen(geoeffnet.inhalt);
+    tresor = geoeffnet.tresor;
+    $('#oeffnen-passwort').value = ''; // ab hier trägt der Tresor den Schlüssel
     meldung.hidden = true;
     anwendungZeigen();
   } catch (fehler) {
@@ -166,8 +169,26 @@ async function dateiOeffnen() {
   }
 }
 
-/** Schreibt die Datei zurück. Ohne Schreibrecht wird sie heruntergeladen. */
-async function speichern({ neuerOrt = false } = {}) {
+let schreibvorgang = Promise.resolve();
+
+/**
+ * Schreibt die Datei zurück. Ohne Schreibrecht wird sie heruntergeladen.
+ *
+ * Aufrufe laufen streng nacheinander: Ein Speichervorgang dauert wegen der
+ * Verschlüsselung einige Zeit, und in dieser Spanne kann die nächste Änderung
+ * bereits den nächsten auslösen. Zwei gleichzeitig offene Schreibströme auf
+ * dieselbe Datei wären eine gute Gelegenheit für eine halb geschriebene
+ * Klassendatei -- und die ist verschlüsselt, also nicht von Hand zu retten.
+ */
+function speichern(optionen = {}) {
+  // Fehler des Vorgängers dürfen die Kette nicht abreißen lassen, an den
+  // eigenen Aufrufer aber sehr wohl durchgereicht werden.
+  const dieser = schreibvorgang.catch(() => {}).then(() => dateiSchreiben(optionen));
+  schreibvorgang = dieser.catch(() => {});
+  return dieser;
+}
+
+async function dateiSchreiben({ neuerOrt = false } = {}) {
   if (!datei) return false;
   // Beispieldaten bleiben im Arbeitsspeicher -- sie sollen nie als Datei
   // herumliegen und schon gar nicht eine echte Klassendatei überschreiben.
@@ -178,7 +199,7 @@ async function speichern({ neuerOrt = false } = {}) {
   // Was jetzt offen ist, steckt gleich in den Bytes. Während des Schreibens
   // kann weitergetippt werden -- das darf hinterher nicht als gesichert gelten.
   const standVorher = offeneAenderungen;
-  const bytes = await verschluesseln(datei, passwort);
+  const bytes = await verschluesseln(datei, tresor);
   const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}.gradu`;
 
   if (kannDirektSchreiben) {
@@ -286,7 +307,7 @@ function dateiVerdrahten() {
   // die Arbeitsdatei bleibt, wo sie ist.
   $('#datei-kopie').addEventListener('click', async () => {
     if (!datei || datei.beispiel) return;
-    const bytes = await verschluesseln(datei, passwort);
+    const bytes = await verschluesseln(datei, tresor);
     const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}-${heuteKurz()}.gradu`;
 
     if (kannDirektSchreiben) {
@@ -405,18 +426,27 @@ function anwendungZeigen() {
   alesZeichnen();
 }
 
-function alesZeichnen() {
-  const zeitraum = aktuellerZeitraum();
-  const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum).length;
+/**
+ * Text der Statuszeile. Beide Angaben stehen nebeneinander -- vorher verdeckte
+ * „Coaching-Gespräche stehen an" die Zahl der fehlenden Selbsteinschätzungen,
+ * und ausgerechnet im Coaching-Zeitraum ist sie am wichtigsten.
+ */
+function leistenstatus(zeitraum) {
+  if (!datei.lernende.length) return 'noch keine Kinder in der Liste';
 
+  const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum).length;
+  const teile = [
+    fehlen === 0 ? 'alle Selbsteinschätzungen da'
+      : fehlen === 1 ? '1 Selbsteinschätzung fehlt noch'
+        : `${fehlen} Selbsteinschätzungen fehlen noch`,
+  ];
+  if (kd.coachingFaellig(datei, zeitraum)) teile.push('Coaching-Gespräche stehen an');
+  return teile.join(' · ');
+}
+
+function alesZeichnen() {
   zeitraumwahlZeichnen();
-  $('#leiste-status').textContent = !datei.lernende.length
-    ? 'noch keine Kinder in der Liste'
-    : kd.coachingFaellig(datei, zeitraum)
-      ? 'Coaching-Gespräche stehen an'
-      : fehlen
-        ? `${fehlen} Selbsteinschätzung${fehlen === 1 ? '' : 'en'} fehlt noch`
-        : 'alle Selbsteinschätzungen da';
+  $('#leiste-status').textContent = leistenstatus(aktuellerZeitraum());
 
   klassenlisteZeichnen();
   fremdZeichnen();
@@ -428,7 +458,9 @@ function klassenlisteZeichnen() {
   const zeitraum = aktuellerZeitraum();
 
   if (!datei.lernende.length) {
-    ziel.innerHTML = '<p class="leer">Noch keine Kinder angelegt.</p>';
+    ziel.innerHTML =
+      '<p class="leer"><img class="leer-bild" src="../bilder/leer-klasse.png" alt="" ' +
+      'width="512" height="341">Noch keine Kinder angelegt.</p>';
     return;
   }
 
@@ -582,7 +614,8 @@ function coachingsZeichnen(kind) {
             </article>`;
         })
         .join('')
-    : '<p class="leer">Noch kein Coaching-Gespräch festgehalten.</p>';
+    : '<p class="leer"><img class="leer-bild" src="../bilder/leer-coaching.png" alt="" ' +
+      'width="512" height="341">Noch kein Coaching-Gespräch festgehalten.</p>';
 }
 
 function datumLang(iso) {
@@ -716,17 +749,12 @@ function bogenZeichnen(kind, bloecke) {
   $('#coaching-bogen').innerHTML = `
     <table class="bogen">
       <thead>
-        <tr><th rowspan="2" class="kriterienspalte">Verantwortung ${praepositionText(kind.stufe)}</th>${kopf}</tr>
+        <tr><th rowspan="2" class="kriterienspalte">Verantwortung ${praeposition(kind.stufe)}</th>${kopf}</tr>
         <tr>${unterkopf}</tr>
       </thead>
       <tbody>${koerper}</tbody>
     </table>
     <p class="legende">${katalog.skala.map((s) => `<b>${s.kurz}</b> ${s.text}`).join(' · ')}</p>`;
-}
-
-function praepositionText(stufenId) {
-  return { hafen: 'im Hafen', ankerplatz: 'am Ankerplatz', boie: 'an der Boie',
-    'freie-see': 'auf Freier See' }[stufenId] ?? '';
 }
 
 function belegeZeichnen(kind, bloecke) {
@@ -748,15 +776,15 @@ function belegeZeichnen(kind, bloecke) {
 }
 
 function entscheidungZeichnen(kind) {
-  const hoch = kd_nachbar(kind.stufe, 'hoch');
-  const runter = kd_nachbar(kind.stufe, 'runter');
+  const hoch = nachbarStufe(katalog, kind.stufe, 'hoch');
+  const runter = nachbarStufe(katalog, kind.stufe, 'runter');
 
   const auswahl = [
-    hoch && { wert: 'hoch', titel: `Hochstufung auf ${stufe(katalog, hoch).name}`,
+    hoch && { wert: 'hoch', titel: `Hochstufung auf ${hoch.name}`,
       text: 'Die Verantwortung dieser Stufe wird erfüllt.' },
     { wert: 'gleich', titel: `${stufe(katalog, kind.stufe).name} halten`,
       text: 'Noch nicht so weit – mit Begründung.' },
-    runter && { wert: 'runter', titel: `Rückstufung auf ${stufe(katalog, runter).name}`,
+    runter && { wert: 'runter', titel: `Rückstufung auf ${runter.name}`,
       text: 'Die Verantwortung wird über längere Zeit nicht erfüllt.' },
   ].filter(Boolean);
 
@@ -775,12 +803,6 @@ function entscheidungZeichnen(kind) {
   entscheidungWechsel(null, kind);
 }
 
-function kd_nachbar(stufenId, richtung) {
-  const kette = katalog.stufen.map((s) => s.id);
-  const ziel = kette.indexOf(stufenId) + (richtung === 'hoch' ? 1 : -1);
-  return kette[ziel] ?? null;
-}
-
 function entscheidungWechsel(wert, kind) {
   for (const feld of document.querySelectorAll('.entscheidung-feld')) {
     feld.classList.toggle('gewaehlt', feld.dataset.wert === wert);
@@ -796,7 +818,7 @@ function entscheidungWechsel(wert, kind) {
 
 /** Die Ankreuzliste entsteht aus dem Katalog -- kein zweiter Bogen zu pflegen. */
 function gruendeZeichnen(kind) {
-  $('#coaching-gruende').innerHTML = kd_rueckstufungsgruende(kind.stufe)
+  $('#coaching-gruende').innerHTML = rueckstufungsgruende(katalog, kind.stufe)
     .map(
       (g) => `
       <label class="grund">
@@ -805,10 +827,6 @@ function gruendeZeichnen(kind) {
       </label>`
     )
     .join('');
-}
-
-function kd_rueckstufungsgruende(stufenId) {
-  return kriterienDerStufe(katalog, stufenId).map((k) => ({ id: k.id, text: k.rueckstufung }));
 }
 
 function coachingSpeichern() {
@@ -843,6 +861,7 @@ function coachingSpeichern() {
     schuelerId: coachingKind.id,
     zeitraum: aktuellerZeitraum(),
     entscheidung,
+    nachStufe: stufeNachEntscheidung(katalog, coachingKind.stufe, entscheidung),
     begruendung,
     vereinbarungen: $('#coaching-vereinbarungen').value,
     gruende,
@@ -868,9 +887,31 @@ function coachingBereitZeigen() {
   for (const ueber of document.querySelectorAll('#ansicht-coaching h2')) ueber.hidden = true;
 }
 
+/**
+ * Dieselbe Vorsicht wie beim Import: Ein zweiter Eintrag zum selben Kind wäre
+ * schwer zu bemerken und teuer -- `lernendeSuchen()` findet danach immer nur den
+ * ersten, der zweite bekäme nie eine Selbsteinschätzung zugeordnet.
+ */
 function kindAnlegen() {
-  const name = prompt('Name des Kindes:');
-  if (!name?.trim()) return;
+  const name = prompt('Name des Kindes:')?.trim();
+  if (!name) return;
+
+  const vorhanden = kd.lernendeSuchen(datei, name);
+  if (vorhanden) {
+    alert(`„${vorhanden.name}“ steht schon in der Klassenliste.`);
+    return;
+  }
+
+  const aehnlich = kd.aehnlicheNamen(datei, name);
+  if (aehnlich.length) {
+    const liste = aehnlich.slice(0, 3).map((k) => `„${k.name}“`).join(', ');
+    const weiter = confirm(
+      `In der Klasse gibt es schon ${liste}.\n\n` +
+        `„${name}“ trotzdem als weiteres Kind anlegen?`
+    );
+    if (!weiter) return;
+  }
+
   kd.lernendeAnlegen(datei, name, katalog.stufen[0].id);
   merken();
   alesZeichnen();
@@ -944,12 +985,15 @@ function importErgebnisZeichnen(ergebnisse) {
 
   zuordnungVerdrahten();
 
-  const fehlen = kd.fehlendeSelbsteinschaetzungen(datei);
+  // Nach dem gewählten Zeitraum, nicht nach dem heutigen -- sonst widerspricht
+  // die Liste beim Nachtragen einer alten Runde der Übersicht.
+  const zeitraum = aktuellerZeitraum();
+  const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum);
   $('#import-fehlliste').innerHTML = fehlen.length
-    ? `<h2>Fehlt noch (${fehlen.length})</h2><div class="meldungen">${fehlen
-        .map((l) => meldung('offen', l.name, ''))
-        .join('')}</div>`
-    : '<p class="leer">Alle Selbsteinschätzungen dieses Zeitraums sind da.</p>';
+    ? `<h2>Fehlt noch in Zeitraum ${zeitraum} (${fehlen.length})</h2>
+       <div class="meldungen">${fehlen.map((l) => meldung('offen', l.name, '')).join('')}</div>`
+    : `<p class="leer"><img class="leer-bild" src="../bilder/alles-da.png" alt=""
+         width="512" height="341">Alle Selbsteinschätzungen für Zeitraum ${zeitraum} sind da.</p>`;
 }
 
 function meldung(art, name, text) {

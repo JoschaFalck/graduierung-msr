@@ -228,15 +228,19 @@ export function fehlendeSelbsteinschaetzungen(datei, zeitraum = zeitraumFuer(dat
 /**
  * Hält ein Coaching-Gespräch fest und setzt die Stufe entsprechend.
  * `entscheidung`: 'hoch' | 'gleich' | 'runter'.
+ *
+ * `nachStufe` kommt vom Aufrufer, weil die Reihenfolge der Stufen im Katalog
+ * steht und diese Datei den Katalog bewusst nicht kennt. Ermittelt wird sie mit
+ * `stufeNachEntscheidung()` aus katalog.js -- vorher stand hier eine zweite,
+ * hart verdrahtete Stufenkette.
  */
-export function coachingEintragen(datei, { schuelerId, zeitraum, entscheidung, begruendung,
-  vereinbarungen, gruende = [], gueltigAb, ausweisUebergeben = false, datum }) {
+export function coachingEintragen(datei, { schuelerId, zeitraum, entscheidung, nachStufe,
+  begruendung, vereinbarungen, gruende = [], gueltigAb, ausweisUebergeben = false, datum }) {
   const kind = datei.lernende.find((l) => l.id === schuelerId);
   if (!kind) throw new Error('Unbekannte Person.');
+  if (!nachStufe) throw new Error('Zielstufe fehlt.');
 
   const vonStufe = kind.stufe;
-  const nachStufe =
-    entscheidung === 'gleich' ? vonStufe : nachbarStufeId(datei, vonStufe, entscheidung);
 
   const eintrag = {
     id: kennung(),
@@ -261,14 +265,6 @@ export function coachingEintragen(datei, { schuelerId, zeitraum, entscheidung, b
   }
   beruehren(datei);
   return eintrag;
-}
-
-function nachbarStufeId(datei, stufenId, richtung) {
-  // Reihenfolge steckt im Katalog; hier reicht die bekannte Kette
-  const kette = ['hafen', 'ankerplatz', 'boie', 'freie-see'];
-  const i = kette.indexOf(stufenId);
-  const ziel = i + (richtung === 'hoch' ? 1 : -1);
-  return kette[Math.min(kette.length - 1, Math.max(0, ziel))];
 }
 
 /**

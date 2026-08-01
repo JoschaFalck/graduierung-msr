@@ -105,6 +105,18 @@ export function nachbarStufe(katalog, stufenId, richtung) {
 }
 
 /**
+ * Zielstufe einer Coaching-Entscheidung ('hoch' | 'gleich' | 'runter').
+ * Am oberen und unteren Ende bleibt die Stufe stehen.
+ *
+ * Die einzige Stelle, an der die Reihenfolge der Stufen ausgewertet wird --
+ * sie steht in katalog.json und sonst nirgends.
+ */
+export function stufeNachEntscheidung(katalog, stufenId, entscheidung) {
+  if (entscheidung === 'gleich') return stufenId;
+  return nachbarStufe(katalog, stufenId, entscheidung)?.id ?? stufenId;
+}
+
+/**
  * Fasst mehrere Kriterienwerte zu einem Zeilenwert zusammen.
  *
  * Das Kind kreuzt einzelne Kriterien an, die Lehrkraft die Sammelzeile

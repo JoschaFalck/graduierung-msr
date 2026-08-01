@@ -5,7 +5,7 @@ const BASIS = new URL('gemeinsam', import.meta.url).pathname;
 
 const {
   katalogSetzen, kriterienDerStufe, bewertungszeilen,
-  rueckstufungsgruende, nachbarStufe, stufenBisEinschliesslich,
+  rueckstufungsgruende, nachbarStufe, stufenBisEinschliesslich, stufeNachEntscheidung,
 } = await import(`${BASIS}/katalog.js`);
 const { uebergabeErzeugen, uebergabePruefen, dateiname } = await import(`${BASIS}/uebergabe.js`);
 
@@ -69,6 +69,13 @@ test('Sammelzeilentext lautet richtig', () => {
   assert.equal(zeilen[0].text, 'Ich erfülle die Verantwortlichkeiten im Hafen.');
   assert.equal(zeilen[1].text, 'Ich erfülle die Verantwortlichkeiten am Ankerplatz.');
   assert.equal(zeilen[2].text, 'Ich erfülle die Verantwortlichkeiten an der Boie.');
+});
+test('Zielstufe einer Entscheidung, an den Enden bleibt sie stehen', () => {
+  assert.equal(stufeNachEntscheidung(katalog, 'hafen', 'hoch'), 'ankerplatz');
+  assert.equal(stufeNachEntscheidung(katalog, 'boie', 'runter'), 'ankerplatz');
+  assert.equal(stufeNachEntscheidung(katalog, 'boie', 'gleich'), 'boie');
+  assert.equal(stufeNachEntscheidung(katalog, 'hafen', 'runter'), 'hafen');
+  assert.equal(stufeNachEntscheidung(katalog, 'freie-see', 'hoch'), 'freie-see');
 });
 test('Nachbarstufen stimmen, Enden sind null', () => {
   assert.equal(nachbarStufe(katalog, 'hafen', 'hoch').id, 'ankerplatz');
@@ -265,23 +272,40 @@ test('Stufenwechsel wird vermerkt', () => {
 });
 
 console.log('\nVerschlüsselung');
-const bytes = await tresor.verschluesseln(datei, 'Seepferdchen-42!');
+const geheimfach = await tresor.tresorAnlegen('Seepferdchen-42!');
+const bytes = await tresor.verschluesseln(datei, geheimfach);
 geprueft++; console.log('  ok  Runde durch Ver- und Entschlüsseln');
 test('Geheimtext trägt die Kennung und ist kein Klartext', () => {
   assert.equal(new TextDecoder().decode(bytes.slice(0, 6)), 'GRADU1');
   assert.ok(!new TextDecoder().decode(bytes).includes('Lea'), 'Name im Klartext gefunden!');
 });
-const zurueck = await tresor.entschluesseln(bytes, 'Seepferdchen-42!');
+const zurueck = await tresor.tresorOeffnen(bytes, 'Seepferdchen-42!');
 test('entschlüsselt identisch', () => {
-  assert.deepEqual(zurueck, JSON.parse(JSON.stringify(datei)));
+  assert.deepEqual(zurueck.inhalt, JSON.parse(JSON.stringify(datei)));
 });
-await assert.rejects(() => tresor.entschluesseln(bytes, 'falsch'), /Passwort falsch/);
+await assert.rejects(() => tresor.tresorOeffnen(bytes, 'falsch'), /Passwort falsch/);
 geprueft++; console.log('  ok  falsches Passwort scheitert sauber');
-await assert.rejects(() => tresor.entschluesseln(new Uint8Array(80), 'x'), /keine Klassendatei/);
+await assert.rejects(() => tresor.tresorOeffnen(new Uint8Array(80), 'x'), /keine Klassendatei/);
 geprueft++; console.log('  ok  fremde Datei wird abgelehnt');
-const zweite = await tresor.verschluesseln(datei, 'Seepferdchen-42!');
-assert.notDeepEqual([...bytes.slice(6, 40)], [...zweite.slice(6, 40)]);
-geprueft++; console.log('  ok  Salz und IV sind je Speichervorgang neu');
+
+// Das Salz bleibt je Datei gleich, damit der Schlüssel nur einmal abgeleitet
+// werden muss. Frisch sein muss der IV -- sonst wäre AES-GCM angreifbar.
+const zweite = await tresor.verschluesseln(datei, geheimfach);
+const salzVon = (d) => [...d.slice(7, 23)].join(',');
+const ivVon = (d) => [...d.slice(23, 35)].join(',');
+test('gleiches Salz, aber je Speichervorgang ein neuer IV', () => {
+  assert.equal(salzVon(bytes), salzVon(zweite), 'Salz soll gleich bleiben');
+  assert.notEqual(ivVon(bytes), ivVon(zweite), 'IV muss sich unterscheiden');
+  assert.notDeepEqual([...bytes], [...zweite], 'Geheimtexte dürfen nicht gleich sein');
+});
+
+// Nach dem Öffnen wird mit dem Schlüssel aus der Datei weitergeschrieben --
+// die Passphrase wird dafür nicht noch einmal gebraucht.
+const geaendert = { ...JSON.parse(JSON.stringify(datei)), klasse: '9b' };
+const spaeter = await tresor.verschluesseln(geaendert, zurueck.tresor);
+test('der Tresor einer geöffneten Datei schreibt weiter', async () => {
+  assert.deepEqual((await tresor.tresorOeffnen(spaeter, 'Seepferdchen-42!')).inhalt, geaendert);
+});
 test('Passphrase-Güte', () => {
   assert.equal(tresor.passphraseGuete('kurz').stufe, 'schwach');
   assert.equal(tresor.passphraseGuete('Seepferdchen-42!').stufe, 'gut');
@@ -348,7 +372,8 @@ const tom = kd.lernendeAnlegen(datei3, 'Tom Berg', 'hafen');
 
 test('Hochstufung ändert die Stufe und hält das Gespräch fest', () => {
   const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 4,
-    entscheidung: 'hoch', datum: '2026-11-06', gueltigAb: '2026-11-09', ausweisUebergeben: true });
+    entscheidung: 'hoch', nachStufe: stufeNachEntscheidung(katalog, tom.stufe, 'hoch'),
+    datum: '2026-11-06', gueltigAb: '2026-11-09', ausweisUebergeben: true });
   assert.equal(c.vonStufe, 'hafen');
   assert.equal(c.nachStufe, 'ankerplatz');
   assert.deepEqual(c.zeitraeume, [1, 2, 3, 4]);
@@ -358,14 +383,16 @@ test('Hochstufung ändert die Stufe und hält das Gespräch fest', () => {
 
 test('Stufe halten lässt die Stufe unverändert', () => {
   const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 8,
-    entscheidung: 'gleich', datum: '2027-01-15', begruendung: 'Termine noch unzuverlässig.' });
+    entscheidung: 'gleich', nachStufe: stufeNachEntscheidung(katalog, tom.stufe, 'gleich'),
+    datum: '2027-01-15', begruendung: 'Termine noch unzuverlässig.' });
   assert.equal(c.nachStufe, 'ankerplatz');
   assert.equal(kd.lernendeSuchen(datei3, 'Tom Berg').stufe, 'ankerplatz');
 });
 
 test('Rückstufung geht eine Stufe zurück, mit Gründen', () => {
   const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 12,
-    entscheidung: 'runter', datum: '2027-03-12', gruende: ['H2', 'A1'],
+    entscheidung: 'runter', nachStufe: stufeNachEntscheidung(katalog, tom.stufe, 'runter'),
+    datum: '2027-03-12', gruende: ['H2', 'A1'],
     vereinbarungen: 'Logbuch freitags vorzeigen.' });
   assert.equal(c.nachStufe, 'hafen');
   assert.deepEqual(c.gruende, ['H2', 'A1']);
@@ -374,7 +401,8 @@ test('Rückstufung geht eine Stufe zurück, mit Gründen', () => {
 
 test('unterste Stufe lässt sich nicht weiter zurückstufen', () => {
   const c = kd.coachingEintragen(datei3, { schuelerId: tom.id, zeitraum: 16,
-    entscheidung: 'runter', datum: '2027-05-07' });
+    entscheidung: 'runter', nachStufe: stufeNachEntscheidung(katalog, tom.stufe, 'runter'),
+    datum: '2027-05-07' });
   assert.equal(c.nachStufe, 'hafen');
 });
 
