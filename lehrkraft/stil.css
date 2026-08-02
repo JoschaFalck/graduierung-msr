@@ -109,23 +109,13 @@ h2 {
 }
 
 /* Logo oben rechts im Bild -- dieselbe Stelle wie in der Schüleranwendung. */
-.karten-logo-feld {
-  display: inline-block; padding: 0.5rem 0.7rem;
-  background: #fff; border-radius: 10px;
+/* Ein Verweis, der wie ein Knopf aussieht -- `.knopf-leise` setzt Farbe und
+   Rahmen, hier kommt nur dazu, was ein <a> nicht von sich aus mitbringt. */
+.knopf-verweis {
+  text-align: center; text-decoration: none;
+  display: flex; flex-direction: column; justify-content: center; gap: 0.15rem;
 }
-.karten-logo-feld img { display: block; width: 190px; max-width: 100%; height: auto; }
-
-.karten-kopf .karten-logo-feld {
-  position: absolute; top: 0.9rem; right: 0.9rem;
-  margin: 0; padding: 0.4rem 0.55rem;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
-}
-.karten-kopf .karten-logo-feld img { width: 132px; }
-
-@media (max-width: 30rem) {
-  .karten-kopf .karten-logo-feld { top: 0.5rem; right: 0.5rem; padding: 0.3rem 0.4rem; }
-  .karten-kopf .karten-logo-feld img { width: 96px; }
-}
+.knopf-verweis em { font-style: normal; font-size: 0.85rem; opacity: 0.8; }
 
 .dateiname {
   padding: 0.6rem 0.8rem; margin: 0 0 1rem;

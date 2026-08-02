@@ -5,7 +5,8 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
   index.html                 Startseite mit den beiden Eingängen
   sw.js                      Service Worker (offline-Betrieb)
   symbole/                   App-Symbole (Anker) und Schullogo
-  material/                  das analoge Material als PDF (Ausweise, Bögen)
+  material/                  eigene Seite mit dem analogen Material als PDF
+    vorschau/                Bild der ersten Seite je PDF (aus den PDFs gerendert)
   bilder/                    Titelbild der Startseite, Stufenbilder, freigestellte Motive
     stufen/                  Bild je Lernstufe für den Ausweis (3:1)
   gemeinsam/
@@ -19,6 +20,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     speicher.js              wo die Klassendatei liegt -- die Schnittstelle aus KONZEPT 7
     qr.js                    QR-Code erzeugen (eigener Encoder, keine Bibliothek)
     kataloge/                eingefrorene Katalogfassungen, je Version eine Datei
+    material.js              Aufzählung des analogen Materials -- für beide Stellen
   schueler/
     index.html               Ersteinrichtung, Ausweis, Selbsteinschätzung, Verlauf
     schueler.js
@@ -178,8 +180,17 @@ Zwei Dinge, die dort bewusst so sind:
   (`docs/KRITERIENKATALOG_Entwurf.md`, noch nicht abgenommen). Wer beides nebeneinander nutzt,
   soll das vorher wissen und nicht im Gespräch.
 
-Der Bereich hängt an der Navigation, ist also erst nach dem Öffnen einer Klasse erreichbar. Für
-eine Fortbildung genügt dafür *Beispielklasse ansehen*.
+**Es gibt ihn an zwei Stellen**, und `gemeinsam/material.js` ist die einzige Aufzählung dahinter:
+
+- `material/index.html` — eine **eigene Seite ohne geöffnete Klasse**, verlinkt von der
+  Einstiegskarte („Analoge Vorlage des Graduierungssystems"). Mit Vorschaubild je Datei, für
+  Fortbildungen und fürs schnelle Ausdrucken. Sie nutzt `lehrkraft/stil.css` mit, damit sie kein
+  zweites Farbschema mitbringt.
+- Der Navigationspunkt *Material* in der Anwendung, für den Griff zwischendurch — dort ohne
+  Vorschaubilder, weil man beim Arbeiten weiß, was man sucht.
+
+Die Vorschaubilder in `material/vorschau/` sind mit `pypdfium2` aus der ersten Seite jedes PDFs
+gerendert (520 px breit, JPEG). Wird ein PDF ersetzt, gehört das Bild neu erzeugt.
 
 ## Die beiden Startkarten
 

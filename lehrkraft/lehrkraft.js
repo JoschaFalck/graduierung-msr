@@ -11,6 +11,7 @@ import { uebergabePruefen } from '../gemeinsam/uebergabe.js';
 import { verschluesseln, tresorAnlegen, tresorOeffnen, passphraseGuete } from '../gemeinsam/tresor.js';
 import { dateiSpeicher } from '../gemeinsam/speicher.js';
 import { qrAlsSvg } from '../gemeinsam/qr.js';
+import { materialGruppen, MATERIAL_ABGLEICH } from '../gemeinsam/material.js';
 import * as kd from '../gemeinsam/klassendatei.js';
 
 const $ = (a) => document.querySelector(a);
@@ -1544,43 +1545,31 @@ function coachingSpeichern() {
  * wird niemand zurückgestuft.
  */
 function materialZeichnen() {
-  const stufen = [...katalogAktuell.stufen].sort((a, b) => a.reihenfolge - b.reihenfolge);
-  const hoechste = stufen.at(-1);
-
-  const eintrag = (datei, titel, zusatz) => `
-    <li>
-      <a class="material-link" href="../material/${datei}" target="_blank" rel="noopener">
-        <span class="material-titel">${escapen(titel)}</span>
-        <span class="material-zusatz">${escapen(zusatz)}</span>
-      </a>
-    </li>`;
-
-  $('#material-ausweise').innerHTML = stufen
-    .map((s) => eintrag(`ausweis-${s.id}.pdf`, `Ausweis ${s.name}`, 'PDF · zwei Karten in A6'))
+  $('#material-liste').innerHTML = materialGruppen(katalogAktuell)
+    .map(
+      (gruppe) => `
+      <h2>${escapen(gruppe.titel)}</h2>
+      <p class="hinweis">${escapen(gruppe.hinweis)}</p>
+      <ul class="materialliste">
+        ${gruppe.stuecke
+          .map(
+            (s) => `
+          <li>
+            <a class="material-link" href="../material/${s.datei}" target="_blank" rel="noopener">
+              <span class="material-titel">${escapen(s.titel)}</span>
+              <span class="material-zusatz">${escapen(s.zusatz)}</span>
+            </a>
+          </li>`
+          )
+          .join('')}
+      </ul>`
+    )
     .join('');
 
-  $('#material-coaching').innerHTML = stufen
-    .map((s) => eintrag(`coaching-bogen-${s.id}.pdf`, `Coaching-Bogen ${s.name}`, 'PDF · ein Blatt A4'))
-    .join('');
-
-  $('#material-rueckstufung').innerHTML = stufen
-    .filter((s) => s.reihenfolge < hoechste.reihenfolge)
-    .map((s) => eintrag(`rueckstufung-${s.id}.pdf`, `Rückstufung auf ${s.name}`, 'PDF · ein Blatt A4'))
-    .join('');
-
-  $('#material-gesamt').innerHTML =
-    eintrag('ausweise-alle-stufen.pdf', 'Ausweise aller vier Stufen', 'PDF · 8 Seiten A6') +
-    eintrag('reflexionsboegen-alle.pdf', 'Alle Reflexionsbögen', 'PDF · 7 Seiten A4');
-
-  // Ehrlichkeit statt Überraschung im Gespräch: Der Katalog der Anwendung ist
-  // gegenüber den gedruckten Bögen an einigen Stellen zusammengeführt worden
-  // (docs/KRITERIENKATALOG_Entwurf.md). Solange das nicht abgenommen ist,
-  // stehen auf Papier und Bildschirm nicht überall dieselben Sätze.
   $('#material-abgleich').innerHTML =
-    '<strong>Papier und Anwendung sind noch nicht deckungsgleich.</strong> Die PDFs sind die ' +
-    'Originale; der Kriterienkatalog der Anwendung fasst einzelne Punkte zusammen und ergänzt ' +
-    'einen. Wer beides nebeneinander nutzt, sollte das wissen. Die Zusammenführung steht in ' +
-    '<code>docs/KRITERIENKATALOG_Entwurf.md</code> und ist noch nicht abgenommen.';
+    `<strong>${escapen(MATERIAL_ABGLEICH.split('.')[0])}.</strong>` +
+    `${escapen(MATERIAL_ABGLEICH.slice(MATERIAL_ABGLEICH.indexOf('.') + 1))} ` +
+    'Die Zusammenführung steht in <code>docs/KRITERIENKATALOG_Entwurf.md</code>.';
 }
 
 // ---------------------------------------------------------------- Rückweg aufs Kindergerät

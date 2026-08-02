@@ -7,7 +7,7 @@
 // (Cache zuerst wäre schneller, würde aber alte Fassungen auf den iPads festhalten --
 // bei 25 Geräten, die man nicht einzeln entstauben kann, ein schlechter Tausch.)
 
-const FASSUNG = 'graduierung-v34';
+const FASSUNG = 'graduierung-v35';
 
 const VORRAT = [
   './',
@@ -25,6 +25,9 @@ const VORRAT = [
   './gemeinsam/beispieldaten.js',
   './gemeinsam/griffe.js',
   './gemeinsam/qr.js',
+  './gemeinsam/material.js',
+  './material/',
+  './material/index.html',
   './gemeinsam/kataloge/katalog-1.json',
   './gemeinsam/speicher.js',
   './lehrkraft/',

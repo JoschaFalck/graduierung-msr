@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16506B">
+<title>Analoge Vorlage – Graduierung MS Rednitzhembach</title>
+<link rel="icon" href="../symbole/symbol-192.png" type="image/png">
+<!-- Dieselben Farb- und Schriftfestlegungen wie in der Lehrkraft-Anwendung.
+     Kein eigenes Farbschema: Diese Seite gehört sichtbar dazu. -->
+<link rel="stylesheet" href="../lehrkraft/stil.css">
+<style>
+  .vorlage-kopf { position: relative; border-bottom: 1px solid var(--linie); background: var(--flaeche); }
+  .vorlage-kopf img {
+    display: block; width: 100%; height: auto;
+    aspect-ratio: 4 / 1; max-height: min(300px, 32vh);
+    object-fit: cover; object-position: center bottom;
+  }
+  .vorlage-titel { padding: 1.5rem 1.5rem 0; }
+  .vorlage-titel h1 { margin: 0 0 0.4rem; }
+
+  /* Die Galerie: Vorschaubild über Titel und Format. Das Bild ist Beiwerk --
+     jede Karte trägt ihren Namen als Text, der Verweis hängt an der ganzen
+     Karte, damit auf dem Tablet die Trefferfläche groß ist. */
+  .vorlagen { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  @media (min-width: 40rem) { .vorlagen { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 62rem) { .vorlagen { grid-template-columns: repeat(4, 1fr); } }
+
+  .vorlage {
+    display: flex; flex-direction: column;
+    text-decoration: none; color: inherit;
+    background: var(--flaeche); border: 1px solid var(--linie);
+    border-radius: var(--radius); box-shadow: var(--schatten);
+    overflow: hidden;
+  }
+  .vorlage:hover { border-color: var(--stufe); }
+  .vorlage:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+  .vorlage-bild {
+    display: block; width: 100%; height: auto;
+    border-bottom: 1px solid var(--linie);
+    background: var(--grund);
+  }
+  .vorlage-text { padding: 0.7rem 0.9rem; border-top: 4px solid var(--farbe, var(--linie)); }
+  .vorlage-name { display: block; font-weight: 600; }
+  .vorlage-zusatz { display: block; font-size: 0.85rem; color: var(--text-leise); }
+
+  .vorlage-zurueck { display: inline-flex; gap: 1.25rem; flex-wrap: wrap; margin: 0 0 1.5rem; }
+  .vorlage-zurueck a { color: var(--stufe); }
+</style>
+</head>
+<body>
+
+<header class="vorlage-kopf">
+  <img src="../bilder/header.jpg"
+       srcset="../bilder/header.jpg 1600w, ../bilder/header-gross.jpg 2400w"
+       sizes="100vw" alt="" width="1600" height="400">
+</header>
+
+<div class="vorlage-titel inhalt">
+  <h1>Analoge Vorlage des Graduierungssystems</h1>
+  <p class="lang">Das gedruckte Material der Mittelschule Rednitzhembach: die Ausweise der vier
+    Lernstufen und die Reflexionsbögen für das Coaching-Gespräch. Alles hier funktioniert ohne
+    die Anwendung – zum Ansehen, zum Ausdrucken oder für eine Runde ganz auf Papier.</p>
+</div>
+
+<main class="inhalt">
+  <p class="vorlage-zurueck">
+    <a href="../lehrkraft/">← Zur Lehrkraft-Anwendung</a>
+    <a href="../">Zur Startseite</a>
+  </p>
+
+  <p class="fehler" id="ladefehler" hidden></p>
+  <div id="vorlagen"></div>
+
+  <p class="warnfeld" id="abgleich"></p>
+</main>
+
+<footer class="fusszeile">
+  <p>App zum Graduierungssystem der Mittelschule Rednitzhembach,
+    Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.</p>
+</footer>
+
+<script type="module">
+import { katalogLaden } from '../gemeinsam/katalog.js';
+import { materialGruppen, MATERIAL_ABGLEICH } from '../gemeinsam/material.js';
+
+const $ = (a) => document.querySelector(a);
+
+function escapen(text) {
+  const b = document.createElement('span');
+  b.textContent = text;
+  return b.innerHTML;
+}
+
+try {
+  const katalog = await katalogLaden('../gemeinsam');
+
+  $('#vorlagen').innerHTML = materialGruppen(katalog)
+    .map(
+      (gruppe) => `
+      <section>
+        <h2>${escapen(gruppe.titel)}</h2>
+        <p class="hinweis">${escapen(gruppe.hinweis)}</p>
+        <ul class="vorlagen">
+          ${gruppe.stuecke
+            .map(
+              (s) => `
+            <li>
+              <a class="vorlage" href="${s.datei}" target="_blank" rel="noopener">
+                ${s.vorschau && !gruppe.ohneVorschau
+                  ? `<img class="vorlage-bild" src="${s.vorschau}" alt=""
+                          width="520" height="736" loading="lazy">`
+                  : ''}
+                <span class="vorlage-text" style="--farbe:${s.farbe ?? 'var(--linie)'}">
+                  <span class="vorlage-name">${escapen(s.titel)}</span>
+                  <span class="vorlage-zusatz">${escapen(s.zusatz)}</span>
+                </span>
+              </a>
+            </li>`
+            )
+            .join('')}
+        </ul>
+      </section>`
+    )
+    .join('');
+
+  $('#abgleich').innerHTML =
+    `<strong>${escapen(MATERIAL_ABGLEICH.split('.')[0])}.</strong>` +
+    escapen(MATERIAL_ABGLEICH.slice(MATERIAL_ABGLEICH.indexOf('.') + 1));
+} catch (fehler) {
+  $('#ladefehler').textContent = `Die Übersicht konnte nicht geladen werden: ${fehler.message}`;
+  $('#ladefehler').hidden = false;
+}
+</script>
+
+</body>
+</html>

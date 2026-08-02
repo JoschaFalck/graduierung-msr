@@ -14,16 +14,13 @@
 <!-- Einstieg: Datei öffnen oder anlegen ------------------------------------->
 <div class="einstieg" id="einstieg">
   <div class="einstieg-karte">
-    <!-- Kopfband wie in der Schüleranwendung: Bild randlos, Logo oben rechts
-         darin. Vorher stand das Logo als eigener Block darunter. -->
+    <!-- Kopfband ohne Logo: Die Schule steht in der Überschrift, und das Bild
+         bleibt dadurch ruhig. -->
     <header class="karten-kopf">
       <img class="karten-bild" src="../bilder/einstieg-lehrkraft.jpg" alt=""
            width="1200" height="600">
-      <span class="karten-logo-feld">
-        <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
-      </span>
     </header>
-    <h1>Graduierung</h1>
+    <h1>Graduierung der MS Rednitzhembach</h1>
     <p class="lang">Deine Klassendaten liegen in einer verschlüsselten Datei auf diesem Gerät.
       Sie werden nirgendwohin übertragen.</p>
 
@@ -98,6 +95,14 @@
       </ol>
       <p>Ausführlich steht das unter „Anleitung“, sobald eine Klasse geöffnet ist.</p>
     </details>
+
+    <!-- Eigene Seite statt des Bereichs in der Anwendung: Das Material soll
+         auch ohne geöffnete Klasse erreichbar sein -- für eine Fortbildung
+         oder wenn nur etwas ausgedruckt werden soll. -->
+    <a class="knopf-leise knopf-verweis" href="../material/">
+      Analoge Vorlage des Graduierungssystems
+      <em>– Ausweise und Reflexionsbögen zum Ansehen und Drucken</em>
+    </a>
 
     <p class="fusszeile-klein">App zum Graduierungssystem der Mittelschule Rednitzhembach,
       Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.<br>
@@ -351,23 +356,7 @@
         unabhängig von der Anwendung nutzbar – zum Ausdrucken, zum Nachlesen oder für
         eine Runde ganz auf Papier.</p>
 
-      <h2>Ausweise zum Ausdrucken</h2>
-      <p class="hinweis">Je Datei zwei gleiche Karten im Format A6. Auf A4 drucken und
-        einmal in der Mitte schneiden – dann hast du zwei Ausweise.</p>
-      <ul class="materialliste" id="material-ausweise"></ul>
-
-      <h2>Coaching-Bögen</h2>
-      <p class="hinweis">Der Bogen für das Gespräch, je ein Blatt pro Stufe: vier Zeiträume,
-        Selbst- und Fremdeinschätzung nebeneinander, Auswertung und Unterschriften.</p>
-      <ul class="materialliste" id="material-coaching"></ul>
-
-      <h2>Rückstufungsbögen</h2>
-      <p class="hinweis">Ankreuzliste der Gründe und Platz für die Vereinbarungen –
-        benannt nach der Stufe, auf die zurückgestuft wird.</p>
-      <ul class="materialliste" id="material-rueckstufung"></ul>
-
-      <h2>Alles am Stück</h2>
-      <ul class="materialliste" id="material-gesamt"></ul>
+      <div id="material-liste"></div>
 
       <p class="warnfeld" id="material-abgleich"></p>
     </section>
