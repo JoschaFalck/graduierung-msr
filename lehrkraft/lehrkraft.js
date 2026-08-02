@@ -471,32 +471,43 @@ function klassenlisteZeichnen() {
       const s = stufe(katalog, kind.stufe);
       const zeilenIds = bewertungszeilen(katalog, kind.stufe).map((r) => r.id);
 
-      const punkte = kd
-        .zeitraeumeDesBlocks(datei, zeitraum)
-        .map((z) => {
-          const selbst = !!kd.einschaetzung(datei, kind.id, z, 'selbst');
-          const fremd = kd.erfassungsstand(datei, kind.id, z, 'fremd', zeilenIds);
+      const zeitraeume = kd.zeitraeumeDesBlocks(datei, zeitraum).map((z) => {
+        const selbst = !!kd.einschaetzung(datei, kind.id, z, 'selbst');
+        const fremd = kd.erfassungsstand(datei, kind.id, z, 'fremd', zeilenIds);
 
-          // „beide“ erst, wenn die Fremdeinschätzung auch vollständig ist
-          const art =
-            selbst && fremd.vollstaendig ? 'beide' : selbst || fremd.erfasst ? 'halb' : 'leer';
+        // „beide“ erst, wenn die Fremdeinschätzung auch vollständig ist
+        const art =
+          selbst && fremd.vollstaendig ? 'beide' : selbst || fremd.erfasst ? 'halb' : 'leer';
 
-          const hinweis = [
-            `Zeitraum ${z}`,
-            selbst ? 'Selbsteinschätzung da' : 'Selbsteinschätzung fehlt',
-            `Fremdeinschätzung ${fremd.erfasst} von ${fremd.gesamt}`,
-          ].join(' · ');
+        const hinweis = [
+          `Zeitraum ${z}`,
+          selbst ? 'Selbsteinschätzung da' : 'Selbsteinschätzung fehlt',
+          `Fremdeinschätzung ${fremd.erfasst} von ${fremd.gesamt}`,
+        ].join(' · ');
 
-          return `<span class="punkt ${art}" title="${hinweis}"></span>`;
-        })
+        return { art, hinweis };
+      });
+
+      const punkte = zeitraeume
+        .map((p) => `<span class="punkt ${p.art}" title="${p.hinweis}"></span>`)
         .join('');
 
+      // Ein echtes <button>, kein <article role="button">: Der Accessibility-Baum
+      // las die Karte sonst als „Schaltfläche" ohne zugänglichen Namen vor.
+      // Tastaturbedienung kommt jetzt vom Element selbst, und `aria-label` sagt
+      // in einem Satz, was die Karte zeigt -- die Punkte allein sind stumm.
+      const vollstaendig = zeitraeume.filter((p) => p.art === 'beide').length;
+      const beschriftung =
+        `${kind.name}, ${s.name}, ` +
+        `${vollstaendig} von ${zeitraeume.length} Zeiträumen vollständig`;
+
       return `
-        <article class="kind" style="--farbe:${s.farbe}" data-kind="${kind.id}" tabindex="0" role="button">
-          <span class="kind-name">${escapen(kind.name)}</span>
-          <span class="kind-stufe">${s.name}</span>
-          <span class="kind-punkte">${punkte}</span>
-        </article>`;
+        <button type="button" class="kind" style="--farbe:${s.farbe}"
+                data-kind="${kind.id}" aria-label="${escapen(beschriftung)}">
+          <span class="kind-name" aria-hidden="true">${escapen(kind.name)}</span>
+          <span class="kind-stufe" aria-hidden="true">${s.name}</span>
+          <span class="kind-punkte" aria-hidden="true">${punkte}</span>
+        </button>`;
     })
     .join('');
 }
@@ -631,17 +642,12 @@ function datumKurz(iso) {
 }
 
 function klassenlisteVerdrahten() {
-  const ziel = $('#klassenliste');
-  ziel.onclick = (e) => {
+  // Nur Klick: Die Karten sind echte <button>, Enter und Leertaste lösen dort
+  // von sich aus einen Klick aus. Die frühere eigene Tastaturbehandlung war
+  // Ersatz für ein <article role="button"> und ist mit ihm weggefallen.
+  $('#klassenliste').onclick = (e) => {
     const karte = e.target.closest('[data-kind]');
     if (karte) kindZeigen(karte.dataset.kind);
-  };
-  ziel.onkeydown = (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const karte = e.target.closest('[data-kind]');
-    if (!karte) return;
-    e.preventDefault();
-    kindZeigen(karte.dataset.kind);
   };
 }
 
@@ -655,12 +661,19 @@ function coachingWahlZeichnen() {
     $('#coaching-wahl').innerHTML = '';
     return;
   }
+  // Bewusst nicht `.wahl-stand` wie in der Fremdeinschätzung: Dort heißt die
+  // Zahl „3 von 5 erfasst" und zählt auf ein Ziel zu, hier heißt sie
+  // „2 Gespräche geführt" und ist eine Vorgeschichte. Gleiche Form für
+  // Ungleiches liest sich falsch -- deshalb eigene Marke, „×" statt nackter
+  // Zahl, und bei null Gesprächen steht gar nichts da.
   $('#coaching-wahl').innerHTML = datei.lernende
     .map((kind) => {
       const gefuehrt = kd.coachingsVon(datei, kind.id).length;
+      const marke = gefuehrt
+        ? `<span class="wahl-marke">${gefuehrt}×<span class="nur-lesen"> Gespräche geführt</span></span>`
+        : '';
       return `<button type="button" class="wahl ${kind.id === coachingKind?.id ? 'aktiv' : ''}"
-                      data-coachingwahl="${kind.id}">${escapen(kind.name)}
-                <span class="wahl-stand">${gefuehrt}</span>
+                      data-coachingwahl="${kind.id}">${escapen(kind.name)}${marke}
               </button>`;
     })
     .join('');
@@ -1179,6 +1192,12 @@ let fremdModus = 'kind';
 let fremdKindId = null;
 
 function fremdVerdrahten() {
+  // Legende über dem Raster. Steht fest, sobald der Katalog da ist -- die
+  // Zeichen in den Erfassungsknöpfen erklären sich sonst nirgends.
+  $('#fremd-legende').innerHTML = katalog.skala
+    .map((s) => `<b>${s.kurz}</b> ${escapen(s.text)}`)
+    .join(' · ');
+
   for (const knopf of document.querySelectorAll('.modus')) {
     knopf.addEventListener('click', () => {
       fremdModus = knopf.dataset.modus;
@@ -1217,7 +1236,7 @@ function fremdNachKind() {
       const stand = kindstand(kind, zeitraum);
       return `<button type="button" class="wahl ${kind.id === fremdKindId ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
                       data-kindwahl="${kind.id}">${escapen(kind.name)}
-                <span class="wahl-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
+                <span class="wahl-stand"><span class="nur-lesen">erfasst: </span>${standtext(stand)}</span>
               </button>`;
     })
     .join('');
@@ -1266,7 +1285,7 @@ function fremdNachKriterium() {
       const stand = zeilenstand(z.id, zeitraum);
       return `<button type="button" class="wahl ${z.id === zeileAktiv ? 'aktiv' : ''} ${stand.fertig ? 'fertig' : ''}"
                       data-zeilenwahl="${z.id}">${escapen(z.text)}
-                <span class="wahl-stand">${stand.fertig ? '✓' : `${stand.erfasst}/${stand.gesamt}`}</span>
+                <span class="wahl-stand"><span class="nur-lesen">erfasst: </span>${standtext(stand)}</span>
               </button>`;
     })
     .join('');
@@ -1349,6 +1368,16 @@ function rasterVerdrahten() {
   };
 }
 
+/**
+ * „3/5" oder „✓" -- und für Screenreader das Häkchen als Wort, sonst liest es
+ * je nach Stimme „Häkchen" oder gar nichts vor.
+ */
+function standtext(stand) {
+  return stand.fertig
+    ? '<span aria-hidden="true">✓</span><span class="nur-lesen">vollständig</span>'
+    : `${stand.erfasst}/${stand.gesamt}`;
+}
+
 /** Wie viele Zeilen sind für dieses Kind erfasst? */
 function kindstand(kind, zeitraum = aktuellerZeitraum()) {
   const zeilenIds = bewertungszeilen(katalog, kind.stufe).map((z) => z.id);
@@ -1374,9 +1403,8 @@ function staendeAuffrischen() {
       ? kindstand(datei.lernende.find((l) => l.id === knopf.dataset.kindwahl), zeitraum)
       : zeilenstand(knopf.dataset.zeilenwahl, zeitraum);
     knopf.classList.toggle('fertig', stand.fertig);
-    knopf.querySelector('.wahl-stand').textContent = stand.fertig
-      ? '✓'
-      : `${stand.erfasst}/${stand.gesamt}`;
+    knopf.querySelector('.wahl-stand').innerHTML =
+      `<span class="nur-lesen">erfasst: </span>${standtext(stand)}`;
   }
 }
 

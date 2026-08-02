@@ -253,10 +253,17 @@ function ausweisZeichnen() {
   // solcher -- die Regel dazu steht in stil.css bei `.ausweis-bild`.
   bild.dataset.stufe = meine.id;
 
+  // Nach Stufen gruppiert, genau wie die Verantwortungsliste darunter. Ohne die
+  // Zwischenüberschriften stehen auf Freier See zwölf Privilegien
+  // ununterscheidbar nebeneinander, und die Frage „Was darf ich jetzt mehr?"
+  // -- der eigentliche Reiz des Systems -- beantwortet der Ausweis nicht.
   $('#liste-privilegien').innerHTML = katalog.stufen
     .filter((s) => s.reihenfolge <= meine.reihenfolge)
-    .flatMap((s) => s.privilegien)
-    .map((text) => `<li>${text}</li>`)
+    .map(
+      (s) =>
+        `<li class="gruppe">${praeposition(s.id)}</li>` +
+        s.privilegien.map((text) => `<li>${text}</li>`).join('')
+    )
     .join('');
 
   $('#liste-verantwortung').innerHTML = katalog.stufen

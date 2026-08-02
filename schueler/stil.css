@@ -456,7 +456,10 @@ button {
 .liste-privilegien li::before { content: "✦"; color: var(--stufe); }
 .liste-verantwortung li::before { content: "•"; color: var(--text-leise); }
 
-.liste-verantwortung .gruppe {
+/* Zwischenueberschrift je Stufe. Gilt fuer beide Ausweislisten: Wer auf Freier
+   See ist, sieht sonst zwoelf Privilegien ununterscheidbar nebeneinander und
+   erkennt nicht, was mit der letzten Stufe dazugekommen ist. */
+.liste .gruppe {
   background: none;
   box-shadow: none;
   padding: 0.75rem 0 0;
@@ -466,7 +469,7 @@ button {
   color: var(--text-leise);
 }
 
-.liste-verantwortung .gruppe::before { content: none; }
+.liste .gruppe::before { content: none; }
 
 .fussbereich { margin-top: 2.5rem; }
 
@@ -812,7 +815,7 @@ button {
 
   /* Ausweis: die beiden Listen nebeneinander */
   .liste { grid-template-columns: 1fr 1fr; }
-  .liste-verantwortung .gruppe { grid-column: 1 / -1; }
+  .liste .gruppe { grid-column: 1 / -1; }
 
   .ausweis-text { padding-right: 10rem; min-height: 8.5rem; }
   .ausweis-symbol { max-width: 7rem; height: 6.5rem; }

@@ -189,6 +189,11 @@ und iPad wird vertikal nichts beschnitten. Zwei Fallstricke stecken darin:
   **Bei neuen Bildern die Ränder prüfen**, solange sie beschnitten dargestellt werden, fällt
   so etwas nicht auf.
 
+Beide Ausweislisten — Privilegien **und** Verantwortung — sind nach Stufen gruppiert
+(`.liste .gruppe`). Ohne die Zwischenüberschriften stehen auf Freier See zwölf Privilegien
+ununterscheidbar nebeneinander, und die Frage „Was darf ich jetzt mehr?", der eigentliche Reiz
+des Systems, bleibt unbeantwortet.
+
 Die Kopfzeile der Karte lautet „Ich lerne im Hafen" -- eine Zeile statt zwei, ganz in der
 Stufenfarbe. Die Präposition kommt aus `praeposition()` im Katalog, damit hier keine zweite
 Schreibweise entsteht. Unter 30 rem weicht das kleine Stufensymbol: Es zeigt dasselbe wie das
@@ -214,6 +219,27 @@ dreispaltig -- die Erfassung bleibt bewusst einspaltig, damit der Blick beim Dur
   Klassendurchgang -- der Maßstab bleibt über die Klasse gleich.
 
 Beide zeigen an jedem Eintrag den Stand (`3/5` oder ✓), damit nichts unbemerkt offen bleibt.
+Für Screenreader steht davor ein verstecktes „erfasst:", und das ✓ trägt das Wort
+„vollständig" — sonst liest die Stimme je nach Einstellung „Häkchen" oder gar nichts.
+
+Legende und Raster stehen zusammen auf `max-width: 60rem`. Über die volle Fensterbreite lagen
+zwischen Kriteriumstext und den X/~/O-Knöpfen auf 1440 px über 1000 px, und der Blick musste bei
+jeder Zeile einmal quer — beim meistgenutzten Handgriff der App. Die Legende über dem Raster
+(`#fremd-legende`, gefüllt aus `katalog.skala`) erklärt die drei Zeichen; die Wortmarken in den
+Knöpfen selbst bleiben `.nur-lesen`, weil sie dort keinen Platz haben.
+
+## Die Punkte in der Klassenübersicht
+
+Ein Punkt je Zeitraum des Blocks. Die drei Zustände unterscheiden sich in der **Form** —
+leerer Ring, halb gefüllt, voll — und nicht nur in der Farbe: Grün/Orange/Grau war bei
+Rot-Grün-Schwäche nicht zu trennen. Eine Legende steht über der Liste.
+
+Die Karten selbst sind echte `<button>` mit `aria-label` („Ayla Kilic, Freie See, 3 von 4
+Zeiträumen vollständig"). Vorher waren sie `<article role="button" tabindex="0">` und wurden
+als „Schaltfläche" ohne zugänglichen Namen vorgelesen. Die eigene Tastaturbehandlung in
+`klassenlisteVerdrahten()` ist damit weggefallen — Enter und Leertaste kommen vom Element.
+Weil `<button>` eigene Vorgaben mitbringt, stehen in `.kind` jetzt `width: 100%`,
+`text-align: left`, `color: inherit` und `border: 0`.
 
 ## Zeitraum frei wählbar
 

@@ -125,6 +125,12 @@ input:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 
 button { font: inherit; cursor: pointer; border-radius: 8px; }
 
+/* Nur fuer Screenreader. Steht global, weil es an mehreren Stellen gebraucht
+   wird: Wortmarken der Skala, Bedeutung der Zahlen in den Auswahlknoepfen. */
+.nur-lesen {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+}
+
 .knopf-gross {
   display: block; width: 100%; padding: 0.8rem; margin-top: 1rem;
   font-weight: 600; color: #fff; background: var(--stufe); border: 0; min-height: 46px;
@@ -186,19 +192,40 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 
 /* ---------- Klassenliste ---------- */
 
+/* Ein <button>, deshalb die Zuruecksetzer: Ohne sie zieht der Browser die Karte
+   auf Knopfbreite zusammen und zentriert den Namen. */
 .kind {
   display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 1rem;
+  width: 100%; text-align: left; color: inherit;
   padding: 0.7rem 0.9rem; margin-bottom: 0.45rem;
-  background: var(--flaeche); border-left: 5px solid var(--farbe);
+  background: var(--flaeche);
+  border: 0; border-left: 5px solid var(--farbe);
   border-radius: 10px; box-shadow: var(--schatten);
 }
 .kind-name { font-weight: 600; }
 .kind-stufe { font-size: 0.88rem; color: var(--farbe); font-weight: 600; }
 .kind-punkte { display: flex; gap: 0.25rem; }
 
-.punkt { width: 12px; height: 12px; border-radius: 50%; background: var(--linie); }
-.punkt.halb { background: var(--mittel); }
-.punkt.beide { background: var(--gut); }
+/* Je Punkt ein Zeitraum des Blocks. Die drei Zustaende unterscheiden sich
+   bewusst in der *Form*, nicht nur in der Farbe -- vorher waren sie
+   gruen/orange/grau gefuellt und damit bei Rot-Gruen-Schwaeche nicht zu
+   trennen. Jetzt: leerer Ring / halb gefuellt / voll. */
+.punkt {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: transparent; border: 2px solid var(--linie);
+}
+.punkt.halb {
+  border-color: var(--mittel);
+  background: linear-gradient(90deg, var(--mittel) 50%, transparent 50%);
+}
+.punkt.beide { border-color: var(--gut); background: var(--gut); }
+
+.punktlegende {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem;
+  margin: 0 0 0.9rem; font-size: 0.85rem; color: var(--text-leise);
+}
+.punktlegende .punkt { flex: none; margin-left: 0.35rem; }
+.punktlegende .punkt:first-child { margin-left: 0; }
 
 /* ---------- Import ---------- */
 
@@ -244,8 +271,21 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 .wahl.aktiv .wahl-stand { background: rgb(255 255 255 / 22%); color: #fff; }
 .wahl.fertig:not(.aktiv) .wahl-stand { background: var(--gut); color: #fff; }
 
+/* Zahl der gefuehrten Gespraeche im Coaching-Bereich. Bewusst anders als
+   `.wahl-stand`: kein Feld, nur eine leise Zahl -- sie zaehlt nichts ab,
+   sondern erzaehlt eine Vorgeschichte. */
+.wahl-marke { font-size: 0.78rem; font-variant-numeric: tabular-nums; opacity: 0.7; }
+.wahl.aktiv .wahl-marke { opacity: 0.85; }
+
 .rastertitel { margin: 0 0 0.6rem; color: var(--text-leise); }
 .rastertitel strong { color: var(--text); margin-right: 0.5rem; }
+
+/* Der meistgenutzte Handgriff der App: Kriterium lesen, rechts antippen.
+   Ueber die volle Fensterbreite lagen dazwischen auf 1440 px ueber 1000 px --
+   der Blick muss dann bei jeder Zeile einmal quer. Die Bremse gilt fuer
+   Legende und Raster gemeinsam, damit beide buendig bleiben. */
+.skalenlegende, #fremd-raster { max-width: 60rem; }
+.skalenlegende { margin: 0 0 0.6rem; text-align: right; }
 
 .rasterzeile {
   display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem;
@@ -263,9 +303,6 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
   border: 2px solid transparent; border-radius: 8px; cursor: pointer;
 }
 .rasterskala input { position: absolute; opacity: 0; pointer-events: none; }
-.rasterskala .nur-lesen {
-  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
-}
 .rasterskala label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
 .rasterskala label.gewaehlt { color: #fff; }
 .rasterskala label.gewaehlt[data-wert="erreicht"]  { background: var(--gut); }

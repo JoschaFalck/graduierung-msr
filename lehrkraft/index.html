@@ -121,6 +121,10 @@
       <div class="werkzeuge">
         <button type="button" class="knopf-klein" id="kind-anlegen">+ Kind hinzufügen</button>
       </div>
+      <p class="punktlegende">Ein Punkt je Zeitraum des Blocks:
+        <span class="punkt beide" aria-hidden="true"></span> beides da ·
+        <span class="punkt halb" aria-hidden="true"></span> eins von beidem ·
+        <span class="punkt" aria-hidden="true"></span> nichts erfasst</p>
       <div id="klassenliste"></div>
     </section>
 
@@ -219,6 +223,9 @@
       </div>
       <p class="lang" id="fremd-hinweis"></p>
       <div class="wahlleiste" id="fremd-wahl"></div>
+      <!-- Die Zeichen X ~ O stehen in den Knöpfen ohne Wortmarke (die ist dort
+           nur für Screenreader da). Ohne diese Legende muss man sie raten. -->
+      <p class="legende skalenlegende" id="fremd-legende"></p>
       <div id="fremd-raster"></div>
     </section>
 
