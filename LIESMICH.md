@@ -200,9 +200,21 @@ Link auf `.../schueler/`, nicht auf die Übersichtsseite davor. Deshalb trägt s
 `.karte-breit` auf 52 rem gesetzt: Name und Klasse stehen ab 34 rem nebeneinander (2:1 — „8a"
 braucht keine halbe Bildschirmbreite), die vier Stufen ab 40 rem zweispaltig.
 
-Die **Einstiegskarte der Lehrkraft-Anwendung** folgt demselben Aufbau: `karten-kopf` mit
-randlosem Bild (`bilder/einstieg-lehrkraft.jpg`, 3:1) und Logo darin statt darunter, Karte auf
-34 rem, Klasse und Schuljahr im Anlegen-Formular nebeneinander.
+Die **Einstiegskarte der Lehrkraft-Anwendung** ist genauso breit (52 rem) und trägt oben
+dasselbe `header.jpg` — dort **ohne Logo**, weil die Schule in der Überschrift steht
+(„Graduierung der MS Rednitzhembach"). Das Kompass-Motiv `einstieg-lehrkraft.jpg` schließt die
+Karte unten als `.karten-fuss` ab. Auf der breiten Karte stehen *Neue Klasse anlegen* und
+*Beispielklasse ansehen* nebeneinander, ebenso Klasse und Schuljahr im Anlegen-Formular.
+
+**Anleitung und Materialverweis sind ein Paar** (`.einstieg-mehr`): beide führen von der Klasse
+weg und sind Nachschlagewerk, beide haben deshalb dieselbe leise Fläche, denselben dünnen
+Rahmen, dieselbe Rundung und dieselbe linksbündige, halbfette Zeile. Damit heben sie sich von
+den drei Knöpfen darüber ab, ohne laut zu werden. Fläche, Rahmen und Abstände stehen **einmal**
+bei `.einstieg-mehr` — vorher hatte `.anleitung-kurz` sie für sich, und der Verweis daneben
+blieb eckig, weil `border-radius` nur auf `button` stand und er ein `<a>` ist.
+
+Das Fußband ist mit `object-position: center 40%` beschnitten: Bei 4:1 fällt oben und unten je
+ein Viertel weg; mittig geschnitten wäre der Kompass angeschnitten worden.
 
 Drei Dinge stecken darin, die man leicht wieder kaputtmacht:
 

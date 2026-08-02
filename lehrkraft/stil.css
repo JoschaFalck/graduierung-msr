@@ -78,8 +78,10 @@ h2 {
   background: var(--grund); overflow-y: auto;
 }
 
+/* Dieselbe Breite wie die Startkarte der Schüleranwendung -- beide sind das,
+   was man als Erstes sieht. */
 .einstieg-karte {
-  width: min(34rem, 100%);
+  width: min(52rem, 100%);
   background: var(--flaeche);
   border-radius: var(--radius);
   box-shadow: var(--schatten);
@@ -98,24 +100,61 @@ h2 {
 
 /* `aspect-ratio` und `max-height` vertragen sich nicht: Die beiden ziehen auch
    die Breite mit, und rechts bliebe ein weisser Streifen. Deshalb allein das
-   Verhältnis -- auf einer 34rem-Karte ergibt 3:1 ein ruhiges Band. */
+   Verhältnis -- 4:1 ist das Verhältnis, in dem `header.jpg` vorliegt, es wird
+   also gar nicht beschnitten. */
 .karten-bild {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 1;
+  aspect-ratio: 4 / 1;
   object-fit: cover;
-  object-position: center;
+  object-position: center bottom;
+}
+
+/* Abschlussband unten. Die negativen Ränder wie beim Kopf, nur andersherum;
+   die Rundung unten kommt vom `overflow: hidden` der Karte.
+   `center 40%` statt `center`: Bei 4:1 fällt oben und unten je ein Viertel
+   weg, und mittig geschnitten wäre der Kompass angeschnitten. So bleibt er
+   ganz, dafür fehlt unten ein Stück Bleistift. */
+.karten-fuss {
+  display: block;
+  width: calc(100% + 3.5rem);
+  height: auto;
+  margin: 1.75rem -1.75rem -1.75rem;
+  aspect-ratio: 4 / 1;
+  object-fit: cover;
+  object-position: center 40%;
 }
 
 /* Logo oben rechts im Bild -- dieselbe Stelle wie in der Schüleranwendung. */
-/* Ein Verweis, der wie ein Knopf aussieht -- `.knopf-leise` setzt Farbe und
-   Rahmen, hier kommt nur dazu, was ein <a> nicht von sich aus mitbringt. */
+/* Anleitung und Material: zwei Wege, die von der Klasse wegführen und zum
+   Nachschlagen da sind. Sie teilen sich deshalb dasselbe Aussehen -- leise
+   Fläche, dünner Rahmen, linksbündig und fett wie das `summary` -- und heben
+   sich damit von den drei Knöpfen darüber ab, ohne laut zu werden. */
+.einstieg-mehr { display: grid; gap: 0.6rem; margin-top: 1.5rem; }
+
+.anleitung-kurz,
 .knopf-verweis {
-  text-align: center; text-decoration: none;
-  display: flex; flex-direction: column; justify-content: center; gap: 0.15rem;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font-weight: 600;
+  background: var(--grund);
+  border: 1px solid var(--linie);
+  border-radius: 10px; /* stand vorher nur auf `button`, das <a> blieb eckig */
 }
-.knopf-verweis em { font-style: normal; font-size: 0.85rem; opacity: 0.8; }
+
+.knopf-verweis { display: block; color: var(--text); text-decoration: none; }
+.knopf-verweis::after { content: " →"; color: var(--text-leise); }
+.knopf-verweis em {
+  font-style: normal; font-weight: 400; font-size: 0.9rem; color: var(--text-leise);
+}
+.knopf-verweis:hover,
+.anleitung-kurz:hover { border-color: var(--stufe); }
+.knopf-verweis:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+/* Die beiden Nebenwege auf der breiten Karte nebeneinander. */
+.einstieg-reihe { margin-top: 0.6rem; gap: 0.6rem; }
+.einstieg-reihe .knopf-leise { height: 100%; }
 
 .dateiname {
   padding: 0.6rem 0.8rem; margin: 0 0 1rem;
@@ -699,10 +738,9 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 
 /* ---------- Anleitung ---------- */
 
-.anleitung-kurz {
-  margin-top: 1.25rem; padding: 0.85rem 1rem;
-  background: var(--grund); border: 1px solid var(--linie); border-radius: 10px;
-}
+/* Fläche, Rahmen, Rundung und Innenabstand stehen weiter oben bei
+   `.einstieg-mehr` -- gemeinsam mit dem Materialverweis, damit die beiden
+   nicht auseinanderlaufen. */
 .anleitung-kurz summary { font-weight: 600; cursor: pointer; }
 .anleitung-kurz ol { margin: 0.8rem 0 0; padding-left: 1.2rem; color: var(--text-leise);
                      font-size: 0.92rem; line-height: 1.55; }

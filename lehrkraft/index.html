@@ -14,11 +14,13 @@
 <!-- Einstieg: Datei öffnen oder anlegen ------------------------------------->
 <div class="einstieg" id="einstieg">
   <div class="einstieg-karte">
-    <!-- Kopfband ohne Logo: Die Schule steht in der Überschrift, und das Bild
-         bleibt dadurch ruhig. -->
+    <!-- Dasselbe Kopfband wie auf der Startseite und in der Schüleranwendung.
+         Ohne Logo: Die Schule steht in der Überschrift, das Bild bleibt ruhig. -->
     <header class="karten-kopf">
-      <img class="karten-bild" src="../bilder/einstieg-lehrkraft.jpg" alt=""
-           width="1200" height="600">
+      <img class="karten-bild" src="../bilder/header.jpg"
+           srcset="../bilder/header.jpg 1600w, ../bilder/header-gross.jpg 2400w"
+           sizes="(min-width: 56rem) 52rem, 100vw"
+           alt="" width="1600" height="400">
     </header>
     <h1>Graduierung der MS Rednitzhembach</h1>
     <p class="lang">Deine Klassendaten liegen in einer verschlüsselten Datei auf diesem Gerät.
@@ -35,10 +37,14 @@
         <button type="button" class="knopf-winzig" id="zuletzt-vergessen">nicht mehr merken</button>
       </div>
       <button type="button" class="knopf-gross" id="datei-oeffnen">Klassendatei öffnen</button>
-      <button type="button" class="knopf-leise" id="datei-neu">Neue Klasse anlegen</button>
-      <button type="button" class="knopf-leise" id="beispiel-oeffnen">
-        Beispielklasse ansehen <em>– erfundene Daten, nichts wird gespeichert</em>
-      </button>
+      <!-- Die beiden Nebenwege nebeneinander: Auf der breiten Karte wäre jeder
+           für sich über die volle Breite ein sehr großer Knopf für sehr wenig. -->
+      <div class="zwei-spalten einstieg-reihe">
+        <button type="button" class="knopf-leise" id="datei-neu">Neue Klasse anlegen</button>
+        <button type="button" class="knopf-leise" id="beispiel-oeffnen">
+          Beispielklasse ansehen <em>– erfundene Daten, nichts wird gespeichert</em>
+        </button>
+      </div>
     </div>
 
     <!-- Neue Klasse -->
@@ -82,6 +88,10 @@
       <button type="button" class="knopf-leise" data-zurueck>Zurück</button>
     </form>
 
+    <!-- Anleitung und Material bilden ein Paar: beide führen weg vom Öffnen
+         einer Klasse, beide sind Nachschlagewerk. Deshalb dieselbe leise
+         Fläche und dieselbe Ausrichtung -- abgesetzt von den drei Knöpfen. -->
+    <div class="einstieg-mehr">
     <details class="anleitung-kurz">
       <summary>So läuft es ab – in sechs Schritten</summary>
       <ol>
@@ -99,14 +109,19 @@
     <!-- Eigene Seite statt des Bereichs in der Anwendung: Das Material soll
          auch ohne geöffnete Klasse erreichbar sein -- für eine Fortbildung
          oder wenn nur etwas ausgedruckt werden soll. -->
-    <a class="knopf-leise knopf-verweis" href="../material/">
+    <a class="knopf-verweis" href="../material/">
       Analoge Vorlage des Graduierungssystems
       <em>– Ausweise und Reflexionsbögen zum Ansehen und Drucken</em>
     </a>
+    </div>
 
     <p class="fusszeile-klein">App zum Graduierungssystem der Mittelschule Rednitzhembach,
       Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.<br>
       <a href="../">Zur Startseite</a></p>
+
+    <!-- Abschlussband: dasselbe Motiv, das vorher oben stand. -->
+    <img class="karten-fuss" src="../bilder/einstieg-lehrkraft.jpg" alt=""
+         width="1200" height="600">
   </div>
 </div>
 
