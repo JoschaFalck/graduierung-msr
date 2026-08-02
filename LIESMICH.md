@@ -5,6 +5,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
   index.html                 Startseite mit den beiden Eingängen
   sw.js                      Service Worker (offline-Betrieb)
   symbole/                   App-Symbole (Anker) und Schullogo
+  material/                  das analoge Material als PDF (Ausweise, Bögen)
   bilder/                    Titelbild der Startseite, Stufenbilder, freigestellte Motive
     stufen/                  Bild je Lernstufe für den Ausweis (3:1)
   gemeinsam/
@@ -140,6 +141,45 @@ leeren, neu laden. Im Betrieb greift das nicht — dort gilt Netz zuerst.
   Klassendatei überschrieben werden. Deterministisch aufgebaut -- derselbe Aufruf ergibt
   immer dieselbe Klasse.
 - **Schüler:** `…/schueler/#test` blendet eine Leiste mit Stufenwechsel und Profil-Zurücksetzen ein.
+
+## Materialspeicher
+
+`app/material/` enthält das gedruckte Material zum System, erreichbar über den
+Navigationspunkt *Material*: Ausweise zum Ausdrucken, Coaching-Bögen und Rückstufungsbögen.
+Gedacht für drei Fälle -- Ausweise für die Kinder drucken, in einer Fortbildung zeigen, oder
+eine Runde ganz auf Papier führen, wenn jemand das lieber mag.
+
+Die Dateien sind aus den beiden Original-PDFs im Projektordner herausgetrennt (`pypdf`), **je
+Stufe eine Datei**: Man druckt genau die, die man gerade braucht -- acht Ausweise „Hafen" für die
+acht Kinder im Hafen, nicht acht Sätze mit allen vier Stufen.
+
+| Woher | Seiten | Wird zu |
+|---|---|---|
+| `Graduierung_final MS Rednitzhembach.pdf` | 1–2, 3–4, 5–6, 7–8 | `ausweis-<stufe>.pdf` (je zwei gleiche Karten in A6) |
+| `Reflexion_Graduierung MS Rednitzhembach.pdf` | 1, 2, 3, 4 | `coaching-bogen-<stufe>.pdf` |
+| dieselbe Datei | 5, 6, 7 | `rueckstufung-<stufe>.pdf` (Ziel der Rückstufung) |
+
+Dazu beide Originale ungeteilt als `ausweise-alle-stufen.pdf` und `reflexionsboegen-alle.pdf`.
+**Die Originale im Projektordner bleiben unangetastet** -- `material/` enthält Kopien.
+
+Die Liste in der Anwendung entsteht aus dem Katalog, nicht aus einer zweiten Aufzählung: Kommt
+eine Stufe dazu, stimmen Reihenfolge und Namen von allein, die Dateinamen folgen der Stufen-ID.
+Rückstufungsbögen gibt es nur bis zur vorletzten Stufe -- auf die höchste wird niemand
+zurückgestuft.
+
+Zwei Dinge, die dort bewusst so sind:
+
+- **Die PDFs stehen nicht im `VORRAT` des Service Workers.** Sein Geltungsbereich ist `../`, der
+  Vorrat würde also auch auf jedes Schüler-iPad geladen -- rund 1,7 MB, die dort niemand
+  braucht. Der fetch-Handler legt sie nach dem ersten Öffnen ohnehin ab; damit sind sie danach
+  offline verfügbar, und zwar nur auf dem Gerät, das sie benutzt.
+- **Ein Hinweis sagt, dass Papier und Anwendung nicht deckungsgleich sind.** Der Katalog fasst
+  gegenüber den gedruckten Bögen einzelne Punkte zusammen und ergänzt einen
+  (`docs/KRITERIENKATALOG_Entwurf.md`, noch nicht abgenommen). Wer beides nebeneinander nutzt,
+  soll das vorher wissen und nicht im Gespräch.
+
+Der Bereich hängt an der Navigation, ist also erst nach dem Öffnen einer Klasse erreichbar. Für
+eine Fortbildung genügt dafür *Beispielklasse ansehen*.
 
 ## Die beiden Startkarten
 

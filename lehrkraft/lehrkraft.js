@@ -816,6 +816,7 @@ function anwendungZeigen() {
   $('#kopf-klasse').textContent = datei.klasse;
   $('#kopf-schuljahr').textContent = datei.schuljahr;
   gesichertZeigen(offeneAenderungen === 0); // legt Anzeige oder Knopf fest
+  materialZeichnen(); // hängt nur am Katalog, nicht an der Klasse
   allesZeichnen();
 }
 
@@ -1525,6 +1526,61 @@ function coachingSpeichern() {
   const kind = coachingKind;
   kindZeigen(kind.id);
   stufencodeZeigen(kind);
+}
+
+// ---------------------------------------------------------------- Materialspeicher
+
+/**
+ * Das analoge Material zum System: Ausweise, Coaching- und Rückstufungsbögen
+ * als PDF. Sie liegen unverändert in `app/material/` und sind aus den beiden
+ * Original-PDFs herausgetrennt -- je Stufe eine Datei, weil man genau die
+ * druckt, die man gerade braucht.
+ *
+ * Die Liste entsteht aus dem Katalog, nicht aus einer zweiten Aufzählung:
+ * Kommt je eine Stufe dazu, stimmen Reihenfolge und Namen von allein. Die
+ * Dateinamen folgen der Stufen-ID.
+ *
+ * Rückstufungsbögen gibt es nur bis zur vorletzten Stufe -- auf die höchste
+ * wird niemand zurückgestuft.
+ */
+function materialZeichnen() {
+  const stufen = [...katalogAktuell.stufen].sort((a, b) => a.reihenfolge - b.reihenfolge);
+  const hoechste = stufen.at(-1);
+
+  const eintrag = (datei, titel, zusatz) => `
+    <li>
+      <a class="material-link" href="../material/${datei}" target="_blank" rel="noopener">
+        <span class="material-titel">${escapen(titel)}</span>
+        <span class="material-zusatz">${escapen(zusatz)}</span>
+      </a>
+    </li>`;
+
+  $('#material-ausweise').innerHTML = stufen
+    .map((s) => eintrag(`ausweis-${s.id}.pdf`, `Ausweis ${s.name}`, 'PDF · zwei Karten in A6'))
+    .join('');
+
+  $('#material-coaching').innerHTML = stufen
+    .map((s) => eintrag(`coaching-bogen-${s.id}.pdf`, `Coaching-Bogen ${s.name}`, 'PDF · ein Blatt A4'))
+    .join('');
+
+  $('#material-rueckstufung').innerHTML = stufen
+    .filter((s) => s.reihenfolge < hoechste.reihenfolge)
+    .map((s) => eintrag(`rueckstufung-${s.id}.pdf`, `Rückstufung auf ${s.name}`, 'PDF · ein Blatt A4'))
+    .join('');
+
+  $('#material-gesamt').innerHTML =
+    eintrag('ausweise-alle-stufen.pdf', 'Ausweise aller vier Stufen', 'PDF · 8 Seiten A6') +
+    eintrag('reflexionsboegen-alle.pdf', 'Alle Reflexionsbögen', 'PDF · 7 Seiten A4');
+
+  // Ehrlichkeit statt Überraschung im Gespräch: Der Katalog der Anwendung ist
+  // gegenüber den gedruckten Bögen an einigen Stellen zusammengeführt worden
+  // (docs/KRITERIENKATALOG_Entwurf.md). Solange das nicht abgenommen ist,
+  // stehen auf Papier und Bildschirm nicht überall dieselben Sätze.
+  $('#material-abgleich').innerHTML =
+    '<strong>Papier und Anwendung sind noch nicht deckungsgleich.</strong> Die PDFs sind die ' +
+    'Originale; der Kriterienkatalog der Anwendung fasst einzelne Punkte zusammen und ergänzt ' +
+    'einen. Wer beides nebeneinander nutzt, sollte das wissen. Die Zusammenführung steht in ' +
+    '<code>docs/KRITERIENKATALOG_Entwurf.md</code> und ist noch nicht abgenommen.';
 }
 
 // ---------------------------------------------------------------- Rückweg aufs Kindergerät

@@ -743,6 +743,36 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 code { padding: 0.1rem 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
        font-size: 0.88em; background: var(--grund); border-radius: 5px; }
 
+/* ---------- Materialspeicher ---------- */
+
+.materialliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+@media (min-width: 44rem) { .materialliste { grid-template-columns: 1fr 1fr; } }
+
+.material-link {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  padding: 0.7rem 0.9rem 0.7rem 2.6rem;
+  position: relative;
+  text-decoration: none; color: inherit;
+  background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: 10px; box-shadow: var(--schatten);
+}
+.material-link:hover { border-color: var(--stufe); }
+.material-link:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
+
+/* Blattsymbol als reine Zier -- „PDF" steht als Wort in der Zeile darunter. */
+.material-link::before {
+  content: "";
+  position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%);
+  width: 1rem; height: 1.25rem;
+  border: 1.5px solid var(--text-leise); border-radius: 2px;
+  background:
+    linear-gradient(var(--text-leise), var(--text-leise)) center 40% / 60% 1.5px no-repeat,
+    linear-gradient(var(--text-leise), var(--text-leise)) center 62% / 60% 1.5px no-repeat;
+}
+
+.material-titel { font-weight: 600; }
+.material-zusatz { font-size: 0.85rem; color: var(--text-leise); }
+
 /* ---------- Rückweg aufs Kindergerät (QR) ---------- */
 
 .stufencode {

@@ -7,7 +7,7 @@
 // (Cache zuerst wäre schneller, würde aber alte Fassungen auf den iPads festhalten --
 // bei 25 Geräten, die man nicht einzeln entstauben kann, ein schlechter Tausch.)
 
-const FASSUNG = 'graduierung-v33';
+const FASSUNG = 'graduierung-v34';
 
 const VORRAT = [
   './',
@@ -46,6 +46,11 @@ const VORRAT = [
   './symbole/symbol-512.png',
   './symbole/apple-touch-icon.png',
   './symbole/schullogo.png',
+  // Die PDFs aus `material/` stehen bewusst NICHT hier: Der Geltungsbereich
+  // des Workers ist `../`, der Vorrat würde also auch auf jedes Schüler-iPad
+  // geladen -- rund 1,7 MB, die dort niemand braucht. Der fetch-Handler legt
+  // sie nach dem ersten Öffnen ohnehin ab, damit sind sie danach offline da,
+  // und zwar nur auf dem Gerät, das sie wirklich benutzt.
   './symbole/stufen/hafen.png',
   './symbole/stufen/ankerplatz.png',
   './symbole/stufen/boie.png',

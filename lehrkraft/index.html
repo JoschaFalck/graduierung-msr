@@ -343,6 +343,35 @@
     </section>
 
     <!-- Anleitung -->
+    <!-- Materialspeicher: das analoge Material zum System.
+         Die PDFs liegen unverändert dabei, damit man sie drucken, in einer
+         Fortbildung zeigen oder eine Runde ganz auf Papier führen kann. -->
+    <section class="ansicht" id="ansicht-material" hidden>
+      <p class="lang">Das gedruckte Material zum Graduierungssystem. Alles hier ist
+        unabhängig von der Anwendung nutzbar – zum Ausdrucken, zum Nachlesen oder für
+        eine Runde ganz auf Papier.</p>
+
+      <h2>Ausweise zum Ausdrucken</h2>
+      <p class="hinweis">Je Datei zwei gleiche Karten im Format A6. Auf A4 drucken und
+        einmal in der Mitte schneiden – dann hast du zwei Ausweise.</p>
+      <ul class="materialliste" id="material-ausweise"></ul>
+
+      <h2>Coaching-Bögen</h2>
+      <p class="hinweis">Der Bogen für das Gespräch, je ein Blatt pro Stufe: vier Zeiträume,
+        Selbst- und Fremdeinschätzung nebeneinander, Auswertung und Unterschriften.</p>
+      <ul class="materialliste" id="material-coaching"></ul>
+
+      <h2>Rückstufungsbögen</h2>
+      <p class="hinweis">Ankreuzliste der Gründe und Platz für die Vereinbarungen –
+        benannt nach der Stufe, auf die zurückgestuft wird.</p>
+      <ul class="materialliste" id="material-rueckstufung"></ul>
+
+      <h2>Alles am Stück</h2>
+      <ul class="materialliste" id="material-gesamt"></ul>
+
+      <p class="warnfeld" id="material-abgleich"></p>
+    </section>
+
     <section class="ansicht" id="ansicht-anleitung" hidden>
       <p class="lang">Der Ablauf eines Zyklus – und was dabei wo gespeichert wird.</p>
 
@@ -433,6 +462,7 @@
     <button type="button" data-ansicht="fremd">Fremdeinschätzung</button>
     <button type="button" data-ansicht="coaching">Coaching</button>
     <button type="button" data-ansicht="datei">Datei</button>
+    <button type="button" data-ansicht="material">Material</button>
     <button type="button" data-ansicht="anleitung">Anleitung</button>
   </nav>
 </div>
