@@ -357,24 +357,34 @@ button {
    3:1 und wird nie beschnitten -- dieselbe Regel wie beim Titelbild der
    Startseite. Auf sehr flachen Fenstern wuerde die Karte sonst den ganzen
    Bildschirm fuellen, deshalb die Hoehenbremse. */
-/* Anders als beim Titelbild der Startseite ist hier ein Beschnitt gewollt: Die
-   Karte wird auf dem iPad quer ueber 1000 px breit, ein volles 3:1-Bild waere
-   fast 400 px hoch und wuerde alles darunter erschlagen. Deshalb feste Bandhoehe
-   statt `aspect-ratio` -- die beiden zusammen ziehen ausserdem die Breite mit,
-   und rechts bliebe ein weisser Streifen. */
+/* Das Bild behaelt sein Verhaeltnis von 3:1 und ist damit auf Handy und iPad
+   vollstaendig zu sehen -- dort wird nichts beschnitten. Wo doch gedeckelt wird
+   (siehe Media Query weiter unten), faellt dank `object-position: bottom` nur
+   oben Himmel weg; Boot, Anker und Boje sitzen unten im Motiv und bleiben.
+   `aspect-ratio` und `max-height` duerfen nicht zusammen stehen -- die beiden
+   ziehen auch die Breite mit, und rechts bliebe ein weisser Streifen. */
 .ausweis-bild {
   display: block;
   width: 100%;
-  height: clamp(6.5rem, 20vw, 11rem);
+  height: auto;
+  aspect-ratio: 3 / 1;
   object-fit: cover;
+  object-position: center bottom;
   background: var(--grund);
+}
+
+/* Ab hier waere ein volles 3:1-Band ueber 380 px hoch und wuerde die Karte
+   erschlagen. Feste Hoehe statt `aspect-ratio` (die beiden vertragen sich mit
+   einer Hoehenbremse nicht); beschnitten wird dann oben, nicht unten. */
+@media (min-width: 75rem) {
+  .ausweis-bild { aspect-ratio: auto; height: 15rem; }
 }
 
 .ausweis-text {
   position: relative;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   padding-right: 8.5rem;
-  min-height: 9.5rem;
+  min-height: 8rem;
 }
 
 .ausweis-symbol {
@@ -393,13 +403,24 @@ button {
   .ausweis-symbol { filter: invert(1) brightness(1.15); }
 }
 
-@media (max-width: 22rem) {
+/* Auf schmalen Geraeten weicht das Stufensymbol: Es zeigt dasselbe wie das
+   Bild darueber, und ohne es passt „Ich lerne an der Boie" in eine Zeile. */
+@media (max-width: 30rem) {
   .ausweis-text { padding-right: 1.5rem; }
   .ausweis-symbol { display: none; }
 }
 
-.ausweis-oben { margin: 0; color: var(--text-leise); }
-.ausweis-stufe { margin: 0.15rem 0 0.5rem; font-size: 2rem; font-weight: 700; color: var(--stufe); }
+/* Eine Zeile statt zwei („Ich lerne" / „Hafen") -- das gewonnene Stueck Hoehe
+   bekommt das Bild darueber. „Ich lerne" bleibt leichter gesetzt, damit die
+   Stufe trotzdem das Betonte in der Zeile ist. */
+.ausweis-stufe {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.3rem, 4.2vw, 1.9rem);
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--stufe);
+}
+.ausweis-lerne { font-weight: 400; }
 .ausweis-motto { margin: 0; color: var(--text-leise); font-style: italic; }
 
 .liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
@@ -779,8 +800,8 @@ button {
   .liste { grid-template-columns: 1fr 1fr; }
   .liste-verantwortung .gruppe { grid-column: 1 / -1; }
 
-  .ausweis-text { padding-right: 11rem; min-height: 10.5rem; }
-  .ausweis-symbol { max-width: 8rem; height: 7.5rem; }
+  .ausweis-text { padding-right: 10rem; min-height: 8.5rem; }
+  .ausweis-symbol { max-width: 7rem; height: 6.5rem; }
 
   .hilfe p, .hilfe ul { max-width: 46rem; }
 

@@ -235,7 +235,9 @@ function ausweisZeichnen() {
   const meine = stufe(katalog, profil.stufe);
 
   $('#titel-ausweis').textContent = profil.name;
-  $('#ausweis-stufe').textContent = meine.name;
+  // „Ich lerne im Hafen“ / „… an der Boie“ -- die Präposition kommt aus dem
+  // Katalog, damit hier keine zweite Schreibweise entsteht.
+  $('#ausweis-stufe').textContent = praeposition(meine.id);
   $('#ausweis-motto').textContent = meine.motto;
 
   const symbol = $('#ausweis-symbol');

@@ -171,10 +171,22 @@ Alle Bilder sind **schmückend** (`alt=""`); ihre Aussage steht immer auch als T
 Die freigestellten Motive teilen sich die Klasse `.leer-bild`, die in beiden Stylesheets steht;
 im Druckbogen wird sie ausgeblendet.
 
-**Anders als beim Titelbild ist bei den Bändern ein Beschnitt gewollt**: Die Ausweiskarte wird
-auf dem iPad quer über 1000 px breit, ein volles 3:1-Bild wäre dort fast 400 px hoch. Deshalb
-feste Bandhöhe (`height: clamp(...)`) statt `aspect-ratio` -- die beiden zusammen ziehen
-ausserdem die Breite mit, und rechts bliebe ein weisser Streifen.
+Die Ausweiskarte zeigt ihr Stufenbild über `aspect-ratio: 3 / 1` **vollständig** -- auf Handy
+und iPad wird vertikal nichts beschnitten. Zwei Fallstricke stecken darin:
+
+- `aspect-ratio` und `max-height` dürfen nicht zusammenstehen: Die beiden ziehen auch die
+  Breite mit, und rechts bliebe ein weisser Streifen. Ab 75 rem Fensterbreite steht deshalb
+  eine feste `height` **statt** `aspect-ratio`.
+- `ankerplatz.jpg` und `freie-see.jpg` kamen mit weissen Balken oben und unten aus der
+  Bilderzeugung. Die sind entfernt; beide Bilder sind dadurch flacher als 3:1 und werden von
+  `object-fit: cover` seitlich statt vertikal beschnitten -- bei diesen Panoramen unkritisch.
+  **Bei neuen Bildern die Ränder prüfen**, solange sie beschnitten dargestellt werden, fällt
+  so etwas nicht auf.
+
+Die Kopfzeile der Karte lautet „Ich lerne im Hafen" -- eine Zeile statt zwei, ganz in der
+Stufenfarbe. Die Präposition kommt aus `praeposition()` im Katalog, damit hier keine zweite
+Schreibweise entsteht. Unter 30 rem weicht das kleine Stufensymbol: Es zeigt dasselbe wie das
+Bild darüber, und ohne es passt die Zeile aufs Handy.
 
 Die Prompts, aus denen die Bilder entstanden sind, stehen in `Graduierung-App/BILDPROMPTS.md`,
 die Originale in `Graduierung-App/Bildquellen/`. Neue Bilder gehören in den `VORRAT` in `sw.js`,
