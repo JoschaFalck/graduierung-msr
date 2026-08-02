@@ -141,6 +141,31 @@ leeren, neu laden. Im Betrieb greift das nicht — dort gilt Netz zuerst.
   immer dieselbe Klasse.
 - **Schüler:** `…/schueler/#test` blendet eine Leiste mit Stufenwechsel und Profil-Zurücksetzen ein.
 
+## Die beiden Startkarten
+
+Die **Ersteinrichtung der Schüleranwendung ist für die Kinder die Startseite** — sie bekommen den
+Link auf `.../schueler/`, nicht auf die Übersichtsseite davor. Deshalb trägt sie dasselbe Kopfbild
+(`bilder/header.jpg`, 4:1) mit dem Logo oben rechts darin, und dieselbe Karte ist über
+`.karte-breit` auf 52 rem gesetzt: Name und Klasse stehen ab 34 rem nebeneinander (2:1 — „8a"
+braucht keine halbe Bildschirmbreite), die vier Stufen ab 40 rem zweispaltig.
+
+Die **Einstiegskarte der Lehrkraft-Anwendung** folgt demselben Aufbau: `karten-kopf` mit
+randlosem Bild (`bilder/einstieg-lehrkraft.jpg`, 3:1) und Logo darin statt darunter, Karte auf
+34 rem, Klasse und Schuljahr im Anlegen-Formular nebeneinander.
+
+Drei Dinge stecken darin, die man leicht wieder kaputtmacht:
+
+- Das Bild sitzt randlos über **negative Ränder** (`calc(100% + 3.5rem)` und `-1.75rem`, also
+  zweimal das Padding der Karte). Ändert sich das Padding, muss beides mit.
+- Die Karte braucht `overflow: hidden`, sonst nimmt das Bild die Rundung nicht mit.
+- **`aspect-ratio` und `max-height` dürfen nicht zusammenstehen.** Die beiden ziehen auch die
+  Breite mit, und rechts bliebe ein weisser Streifen. Deshalb allein das Verhältnis.
+
+Und eine Falle, die erst mit dem Kopfbild auffiel: Der Vollbild-Hintergrund richtet die Karte mit
+**`align-items: safe center`** aus, nicht mit `place-items: center`. Wird die Karte höher als das
+Fenster, ließe zentriertes Ausrichten sie oben *und* unten überstehen — und der obere Teil wäre
+nicht wegscrollbar. `safe` fällt in dem Fall auf `start` zurück.
+
 ## Startseite
 
 Titelbild oben mit dem Schullogo in der rechten oberen Ecke (dieselbe Stelle wie in der

@@ -14,11 +14,15 @@
 <!-- Einstieg: Datei öffnen oder anlegen ------------------------------------->
 <div class="einstieg" id="einstieg">
   <div class="einstieg-karte">
-    <img class="karten-bild" src="../bilder/einstieg-lehrkraft.jpg" alt=""
-         width="1200" height="600">
-    <span class="karten-logo-feld">
-      <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
-    </span>
+    <!-- Kopfband wie in der Schüleranwendung: Bild randlos, Logo oben rechts
+         darin. Vorher stand das Logo als eigener Block darunter. -->
+    <header class="karten-kopf">
+      <img class="karten-bild" src="../bilder/einstieg-lehrkraft.jpg" alt=""
+           width="1200" height="600">
+      <span class="karten-logo-feld">
+        <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
+      </span>
+    </header>
     <h1>Graduierung</h1>
     <p class="lang">Deine Klassendaten liegen in einer verschlüsselten Datei auf diesem Gerät.
       Sie werden nirgendwohin übertragen.</p>
@@ -42,10 +46,13 @@
 
     <!-- Neue Klasse -->
     <form id="formular-neu" hidden>
-      <label class="feld"><span>Klasse</span>
-        <input type="text" id="neu-klasse" placeholder="8a"></label>
-      <label class="feld"><span>Schuljahr</span>
-        <input type="text" id="neu-schuljahr" placeholder="2026/27"></label>
+      <!-- „8a" und „2026/27" brauchen keine ganze Zeile -->
+      <div class="zwei-spalten">
+        <label class="feld"><span>Klasse</span>
+          <input type="text" id="neu-klasse" placeholder="8a"></label>
+        <label class="feld"><span>Schuljahr</span>
+          <input type="text" id="neu-schuljahr" placeholder="2026/27"></label>
+      </div>
       <label class="feld"><span>Erster Tag des ersten Zeitraums</span>
         <input type="date" id="neu-start"></label>
       <label class="feld"><span>Namen der Klasse <em>(kann warten)</em></span>

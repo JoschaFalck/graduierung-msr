@@ -17,25 +17,39 @@
 
 <!-- Ersteinrichtung: nur beim allerersten Start ------------------------------>
 <div id="einrichtung" class="einrichtung" hidden>
-  <div class="einrichtung-karte">
-    <span class="karten-logo-feld">
-      <img src="../symbole/schullogo.png"
-           alt="Mittelschule Rednitzhembach" width="900" height="237">
-    </span>
+  <!-- Für die Kinder ist das die Startseite: Sie bekommen den Link auf
+       .../schueler/, nicht auf die Übersichtsseite davor. Deshalb dasselbe
+       Kopfbild wie dort -- randlos über der Karte, Logo oben rechts im Bild. -->
+  <div class="einrichtung-karte karte-breit">
+    <header class="karten-kopf">
+      <img class="karten-kopf-bild" src="../bilder/header.jpg"
+           srcset="../bilder/header.jpg 1600w, ../bilder/header-gross.jpg 2400w"
+           sizes="(min-width: 56rem) 52rem, 100vw"
+           alt="" width="1600" height="400">
+      <span class="karten-logo-feld">
+        <img src="../symbole/schullogo.png"
+             alt="Mittelschule Rednitzhembach" width="900" height="237">
+      </span>
+    </header>
+
     <h1>Willkommen!</h1>
     <p class="lang">Hier schätzt du dich selbst ein – alle zwei Wochen.
       Sag mir zuerst, wer du bist.</p>
 
-    <label class="feld">
-      <span>Dein Name</span>
-      <input type="text" id="eingabe-name" autocomplete="name" enterkeyhint="next"
-             placeholder="Vorname Nachname">
-    </label>
+    <!-- Name und Klasse nebeneinander: „8a" braucht keine halbe Bildschirmbreite,
+         und beides gehört zur selben Frage. -->
+    <div class="feldpaar">
+      <label class="feld">
+        <span>Dein Name</span>
+        <input type="text" id="eingabe-name" autocomplete="name" enterkeyhint="next"
+               placeholder="Vorname Nachname">
+      </label>
 
-    <label class="feld">
-      <span>Deine Klasse</span>
-      <input type="text" id="eingabe-klasse" enterkeyhint="done" placeholder="z. B. 8a">
-    </label>
+      <label class="feld">
+        <span>Deine Klasse</span>
+        <input type="text" id="eingabe-klasse" enterkeyhint="done" placeholder="z. B. 8a">
+      </label>
+    </div>
 
     <fieldset class="feld">
       <legend>Auf welcher Stufe bist du gerade?</legend>

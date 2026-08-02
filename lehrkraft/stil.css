@@ -69,12 +69,17 @@ h2 {
 
 .einstieg {
   position: fixed; inset: 0; z-index: 10;
-  display: grid; place-items: center; padding: 1.5rem;
+  display: grid;
+  justify-items: center;
+  /* `safe`: Wird die Karte höher als das Fenster, wäre der obere Überstand bei
+     zentriertem Ausrichten nicht wegscrollbar. Siehe schueler/stil.css. */
+  align-items: safe center;
+  padding: 1.5rem;
   background: var(--grund); overflow-y: auto;
 }
 
 .einstieg-karte {
-  width: min(28rem, 100%);
+  width: min(34rem, 100%);
   background: var(--flaeche);
   border-radius: var(--radius);
   box-shadow: var(--schatten);
@@ -82,23 +87,45 @@ h2 {
   overflow: hidden; /* damit das Kopfbild die Rundung mitnimmt */
 }
 
-/* Schmales Kopfband der Einstiegskarte. Die negativen Ränder heben das Padding
-   der Karte auf, damit das Bild randlos sitzt -- 3.5rem sind zweimal 1.75rem. */
-.karten-bild {
-  display: block;
+/* Kopfband der Einstiegskarte -- gleicher Aufbau wie in der Schüleranwendung.
+   Die negativen Ränder heben das Padding der Karte auf, damit das Bild randlos
+   sitzt (3.5rem sind zweimal 1.75rem). */
+.karten-kopf {
+  position: relative;
   width: calc(100% + 3.5rem);
-  height: auto;
-  aspect-ratio: 2 / 1;
-  max-height: 8.5rem;
-  object-fit: cover;
-  margin: -1.75rem -1.75rem 1.25rem;
+  margin: -1.75rem -1.75rem 1.5rem;
 }
 
+/* `aspect-ratio` und `max-height` vertragen sich nicht: Die beiden ziehen auch
+   die Breite mit, und rechts bliebe ein weisser Streifen. Deshalb allein das
+   Verhältnis -- auf einer 34rem-Karte ergibt 3:1 ein ruhiges Band. */
+.karten-bild {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Logo oben rechts im Bild -- dieselbe Stelle wie in der Schüleranwendung. */
 .karten-logo-feld {
-  display: inline-block; padding: 0.5rem 0.7rem; margin-bottom: 1.25rem;
+  display: inline-block; padding: 0.5rem 0.7rem;
   background: #fff; border-radius: 10px;
 }
 .karten-logo-feld img { display: block; width: 190px; max-width: 100%; height: auto; }
+
+.karten-kopf .karten-logo-feld {
+  position: absolute; top: 0.9rem; right: 0.9rem;
+  margin: 0; padding: 0.4rem 0.55rem;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+}
+.karten-kopf .karten-logo-feld img { width: 132px; }
+
+@media (max-width: 30rem) {
+  .karten-kopf .karten-logo-feld { top: 0.5rem; right: 0.5rem; padding: 0.3rem 0.4rem; }
+  .karten-kopf .karten-logo-feld img { width: 96px; }
+}
 
 .dateiname {
   padding: 0.6rem 0.8rem; margin: 0 0 1rem;
