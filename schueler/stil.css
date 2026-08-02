@@ -375,9 +375,23 @@ button {
 
 /* Ab hier waere ein volles 3:1-Band ueber 380 px hoch und wuerde die Karte
    erschlagen. Feste Hoehe statt `aspect-ratio` (die beiden vertragen sich mit
-   einer Hoehenbremse nicht); beschnitten wird dann oben, nicht unten. */
+   einer Hoehenbremse nicht); beschnitten wird dann oben, nicht unten.
+
+   Die 17 rem sind gerechnet, nicht geraten: Die Karte ist hier hoechstens
+   1152 px breit (`.inhalt` 76 rem minus Innenabstand). 272 px Bandhoehe ergeben
+   darauf 4,2:1 -- fast genau das Verhaeltnis, in dem `ankerplatz` schon
+   vorliegt. Mit 15 rem waren es 4,8:1, und die beiden ungetrimmten 3:1-Bilder
+   (`hafen`, `boie`) verloren dabei ueber ein Drittel ihrer Hoehe. */
 @media (min-width: 75rem) {
-  .ausweis-bild { aspect-ratio: auto; height: 15rem; }
+  .ausweis-bild { aspect-ratio: auto; height: 17rem; }
+
+  /* Nur hier wird ueberhaupt beschnitten -- darunter passt das Verhaeltnis
+     genau, und `object-position` ist wirkungslos. Beim Hafen liegt die
+     Haeuserzeile so hoch im Motiv, dass `bottom` genau durch die Daecher
+     schneidet. Der Ausschnitt rueckt deshalb nach oben: Haeuser, Kran, Boot,
+     Poller und Boje sind vollstaendig drin, weg faellt oben etwas Himmel und
+     unten der vordere Pflasterstreifen. */
+  .ausweis-bild[data-stufe="hafen"] { object-position: center 55%; }
 }
 
 .ausweis-text {

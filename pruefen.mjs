@@ -271,6 +271,21 @@ test('Stufenwechsel wird vermerkt', () => {
   assert.match(k.seit, /^\d{4}-\d{2}-\d{2}$/);
 });
 
+// Das ist der Weg hinter „Stufe übernehmen" im Import: Die gemeldete Stufe wird
+// die geführte, und danach meldet derselbe Import keine Abweichung mehr.
+test('übernommene Stufe beendet die Abweichung', () => {
+  const vorher = kd.selbsteinschaetzungUebernehmen(
+    datei, machUebergabe('Lea Müßig', 'freie-see', '2026-09-23T09:00:00Z'));
+  assert.equal(vorher.stufeWeicht, true);
+
+  kd.stufeSetzen(datei, vorher.schuelerId, vorher.gemeldeteStufe);
+
+  const danach = kd.selbsteinschaetzungUebernehmen(
+    datei, machUebergabe('Lea Müßig', 'freie-see', '2026-09-23T09:00:00Z'));
+  assert.equal(danach.stufeWeicht, false);
+  assert.equal(datei.lernende.find(l => l.id === vorher.schuelerId).stufe, 'freie-see');
+});
+
 console.log('\nVerschlüsselung');
 const geheimfach = await tresor.tresorAnlegen('Seepferdchen-42!');
 const bytes = await tresor.verschluesseln(datei, geheimfach);
@@ -459,6 +474,43 @@ test('Beispiel ist reproduzierbar', () => {
   const zweite = beispielklasse(katalog);
   assert.deepEqual(zweite.lernende.map(l => l.stufe), beispiel.lernende.map(l => l.stufe));
   assert.deepEqual(zweite.coachings.map(c => c.entscheidung), beispiel.coachings.map(c => c.entscheidung));
+});
+
+/**
+ * Vorher zeigte der Beleg immer auf das erste Kriterium der Stufe, während der
+ * Text zufällig gezogen wurde -- im Coaching-Bogen stand dann derselbe Satzkopf
+ * über Sätzen, die von etwas ganz anderem handelten.
+ */
+test('Belegsätze zeigen auf ein Kriterium, das auf der Stufe gilt', () => {
+  const selbst = beispiel.einschaetzungen.filter(e => e.quelle === 'selbst');
+  assert.ok(selbst.length, 'keine Selbsteinschätzungen im Beispiel');
+  for (const e of selbst) {
+    assert.ok(e.beleg?.kriteriumId, 'Belegsatz ohne Kriterium');
+    const gueltig = kriterienDerStufe(katalog, e.stufe).map(k => k.id);
+    assert.ok(gueltig.includes(e.beleg.kriteriumId),
+      `${e.beleg.kriteriumId} gilt auf Stufe ${e.stufe} nicht`);
+  }
+});
+
+test('Belegsätze verteilen sich über mehrere Kriterien', () => {
+  const verwendet = new Set(
+    beispiel.einschaetzungen.filter(e => e.quelle === 'selbst').map(e => e.beleg.kriteriumId)
+  );
+  assert.ok(verwendet.size >= 4, `nur ${verwendet.size} verschiedene Kriterien belegt`);
+});
+
+// Der Coaching-Bogen zeigt vier Zeiträume nebeneinander -- stünde dort viermal
+// derselbe Satz, entwertet das die Demo an genau der Stelle, die sie zeigt.
+test('kein Belegsatz wiederholt sich bei einem Kind direkt', () => {
+  for (const kind of beispiel.lernende) {
+    const ids = beispiel.einschaetzungen
+      .filter(e => e.quelle === 'selbst' && e.schuelerId === kind.id)
+      .sort((a, b) => a.zeitraum - b.zeitraum)
+      .map(e => e.beleg.kriteriumId);
+    for (let i = 1; i < ids.length; i++) {
+      assert.notEqual(ids[i], ids[i - 1], `${kind.name}: ${ids[i]} zweimal hintereinander`);
+    }
+  }
 });
 
 test('Rückstufungen im Beispiel tragen Gründe aus dem Katalog', () => {

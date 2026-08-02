@@ -249,6 +249,9 @@ function ausweisZeichnen() {
   const bild = $('#ausweis-bild');
   bild.src = `../bilder/stufen/${meine.id}.jpg`;
   bild.alt = '';
+  // Der Zuschnitt auf breiten Fenstern hängt am Motiv, nicht an der Stufe als
+  // solcher -- die Regel dazu steht in stil.css bei `.ausweis-bild`.
+  bild.dataset.stufe = meine.id;
 
   $('#liste-privilegien').innerHTML = katalog.stufen
     .filter((s) => s.reihenfolge <= meine.reihenfolge)

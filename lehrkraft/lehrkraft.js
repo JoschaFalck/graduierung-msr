@@ -21,6 +21,7 @@ let tresor = null;     // Salz + Schlüssel, nur im Arbeitsspeicher; der Schlüs
 let griff = null;      // FileSystemFileHandle, wo der Browser das kann
 let zeileAktiv = null; // gewählte Zeile der Fremdeinschätzung
 let offeneImporte = []; // Namen, die noch zugeordnet werden müssen
+let stufenkonflikte = []; // Kinder, deren gemeldete Stufe von der geführten abweicht
 // null = der Zeitraum, in den heute fällt. Frei wählbar, damit sich
 // ausgelassene Runden nachtragen und Gespräche vorziehen lassen.
 let zeitraumWahl = null;
@@ -53,11 +54,11 @@ async function starten() {
   dateiVerdrahten();
   $('#leiste-zeitraum').addEventListener('change', (e) => {
     zeitraumWahl = Number(e.target.value);
-    alesZeichnen();
+    allesZeichnen();
   });
   $('#zeitraum-heute').addEventListener('click', () => {
     zeitraumWahl = null;
-    alesZeichnen();
+    allesZeichnen();
   });
   $('#kind-zurueck').addEventListener('click', () => {
     document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
@@ -84,6 +85,7 @@ function einstiegVerdrahten() {
     tresor = null;
     griff = null;
     offeneImporte = [];
+    stufenkonflikte = [];
     anwendungZeigen();
   });
   $('#beispiel-beenden').addEventListener('click', () => location.reload());
@@ -423,7 +425,7 @@ function anwendungZeigen() {
   $('#kopf-klasse').textContent = datei.klasse;
   $('#kopf-schuljahr').textContent = datei.schuljahr;
   gesichertZeigen(offeneAenderungen === 0); // legt Anzeige oder Knopf fest
-  alesZeichnen();
+  allesZeichnen();
 }
 
 /**
@@ -444,7 +446,7 @@ function leistenstatus(zeitraum) {
   return teile.join(' · ');
 }
 
-function alesZeichnen() {
+function allesZeichnen() {
   zeitraumwahlZeichnen();
   $('#leiste-status').textContent = leistenstatus(aktuellerZeitraum());
 
@@ -803,13 +805,26 @@ function entscheidungZeichnen(kind) {
   entscheidungWechsel(null, kind);
 }
 
+/**
+ * Vereinbarungen gehören zu *jedem* Ausgang, nicht nur zur Rückstufung
+ * (KONZEPT Abschnitt 2, Datenmodell in Abschnitt 7). Bei „Stufe halten" sind
+ * sie sogar das eigentliche Ergebnis des Gesprächs. Das Feld steht deshalb
+ * immer da -- nur die Frage darin wechselt mit der Entscheidung.
+ */
+const VEREINBARUNG_FRAGE = {
+  hoch: 'Was nimmt sich das Kind auf der neuen Stufe vor?',
+  gleich: 'Woran wird bis zum nächsten Gespräch gearbeitet?',
+  runter: 'Was ist verabredet, damit es wieder aufwärtsgeht?',
+};
+const VEREINBARUNG_STANDARD = 'Was ist bis zum nächsten Gespräch verabredet?';
+
 function entscheidungWechsel(wert, kind) {
   for (const feld of document.querySelectorAll('.entscheidung-feld')) {
     feld.classList.toggle('gewaehlt', feld.dataset.wert === wert);
   }
 
   $('#feld-gruende').hidden = wert !== 'runter';
-  $('#feld-vereinbarungen').hidden = wert !== 'runter';
+  $('#coaching-vereinbarungen').placeholder = VEREINBARUNG_FRAGE[wert] ?? VEREINBARUNG_STANDARD;
   $('#begruendung-pflicht').hidden = wert !== 'gleich';
   $('#coaching-ausweis').closest('.haken-feld').hidden = wert === 'gleich';
 
@@ -870,7 +885,7 @@ function coachingSpeichern() {
   });
 
   merken();
-  alesZeichnen();
+  allesZeichnen();
   kindZeigen(coachingKind.id);
 }
 
@@ -914,7 +929,7 @@ function kindAnlegen() {
 
   kd.lernendeAnlegen(datei, name, katalog.stufen[0].id);
   merken();
-  alesZeichnen();
+  allesZeichnen();
 }
 
 // ---------------------------------------------------------------- Import
@@ -954,7 +969,7 @@ async function dateienLesen(dateien) {
   }
 
   merken();
-  alesZeichnen();
+  allesZeichnen();
   importErgebnisZeichnen(ergebnisse);
   $('#datei-eingabe').value = '';
 }
@@ -962,6 +977,14 @@ async function dateienLesen(dateien) {
 function importErgebnisZeichnen(ergebnisse) {
   // unbekannte Namen wandern in die Warteschlange und werden dort entschieden
   for (const e of ergebnisse.filter((e) => e.art === 'unbekannt')) offeneImporte.push(e);
+
+  // Stufenabweichungen ebenso: Sie brauchen eine Entscheidung und dürfen nicht
+  // mit der Ergebnisliste des einen Imports verschwinden.
+  for (const e of ergebnisse.filter((e) => e.stufeWeicht)) {
+    const schon = stufenkonflikte.findIndex((k) => k.schuelerId === e.schuelerId);
+    if (schon === -1) stufenkonflikte.push(e);
+    else stufenkonflikte[schon] = e; // neuere Abgabe gewinnt
+  }
 
   const erledigt = ergebnisse.filter((e) => e.art === 'neu' || e.art === 'ersetzt');
   const zeilen = ergebnisse
@@ -977,6 +1000,7 @@ function importErgebnisZeichnen(ergebnisse) {
 
   $('#import-ergebnis').innerHTML =
     (offeneImporte.length ? zuordnungZeichnen() : '') +
+    stufenkonflikteZeichnen() +
     (zeilen
       ? `<h2>${erledigt.length} übernommen</h2><div class="meldungen">${zeilen}</div>
          <p class="hinweis">Denk daran, den Downloads-Ordner zu leeren –
@@ -984,6 +1008,7 @@ function importErgebnisZeichnen(ergebnisse) {
       : '');
 
   zuordnungVerdrahten();
+  stufenkonflikteVerdrahten();
 
   // Nach dem gewählten Zeitraum, nicht nach dem heutigen -- sonst widerspricht
   // die Liste beim Nachtragen einer alten Runde der Übersicht.
@@ -1041,6 +1066,70 @@ function zuordnungZeichnen() {
   return `<h2>Bitte entscheiden (${offeneImporte.length})</h2>${sammel}${karten}`;
 }
 
+/**
+ * Nach einem Coaching ändert sich die Stufe nur in der Klassendatei. Auf dem
+ * iPad bleibt die alte stehen, bis das Kind sie selbst umstellt -- und bis
+ * dahin füllt es den falschen Kriteriensatz aus. Der Import erkannte das schon
+ * (`stufeWeicht`), warnte aber nur; hier lässt sich jetzt entscheiden, welche
+ * der beiden Stufen gilt.
+ *
+ * Die Abweichung heißt nicht zwangsläufig, dass die Klassendatei recht hat:
+ * Ein Kind kann sich bei der Einrichtung vertippt haben, und es kann außerhalb
+ * der App aufgestiegen sein. Deshalb eine Entscheidung statt einer Automatik.
+ */
+function stufenkonflikteZeichnen() {
+  if (!stufenkonflikte.length) return '';
+
+  const karten = stufenkonflikte
+    .map((k, i) => {
+      const gemeldet = stufe(katalog, k.gemeldeteStufe);
+      const gefuehrt = stufe(katalog, k.gefuehrteStufe);
+      return `
+        <div class="zuordnen">
+          <p class="zuordnen-name"><strong>${escapen(k.name)}</strong>
+            – hat ${gemeldet.name} angegeben, geführt ist ${gefuehrt.name}</p>
+          <p class="hinweis">Die Abgabe aus Zeitraum ${k.zeitraum} deckt damit die
+            Kriterien ${praeposition(k.gemeldeteStufe)} ab, nicht die
+            ${praeposition(k.gefuehrteStufe)}.</p>
+          <button type="button" class="knopf-klein" data-stufe-uebernehmen="${i}">
+            ${gemeldet.name} übernehmen</button>
+          <button type="button" class="knopf-klein leise" data-stufe-behalten="${i}">
+            Kind hat sich vertan – ${gefuehrt.name} bleibt</button>
+        </div>`;
+    })
+    .join('');
+
+  return `<h2>Stufe klären (${stufenkonflikte.length})</h2>
+    <p class="hinweis">Bleibt es bei der geführten Stufe, muss das Kind sie auf seinem
+      Gerät im Ausweis umstellen – sonst kommt beim nächsten Mal wieder der falsche
+      Kriteriensatz.</p>${karten}`;
+}
+
+function stufenkonflikteVerdrahten() {
+  const bereich = $('#import-ergebnis');
+
+  for (const knopf of bereich.querySelectorAll('[data-stufe-uebernehmen]')) {
+    knopf.addEventListener('click', () => {
+      const konflikt = stufenkonflikte[Number(knopf.dataset.stufeUebernehmen)];
+      kd.stufeSetzen(datei, konflikt.schuelerId, konflikt.gemeldeteStufe);
+      stufenkonflikte.splice(Number(knopf.dataset.stufeUebernehmen), 1);
+      merken();
+      allesZeichnen();
+      importErgebnisZeichnen([]);
+    });
+  }
+
+  // Nur die Karte verschwindet -- in der Klassendatei ändert sich nichts.
+  // Meldet das Kind beim nächsten Mal erneut die alte Stufe, steht der Punkt
+  // wieder da, und das ist richtig so: Dann hat es sein Gerät nicht umgestellt.
+  for (const knopf of bereich.querySelectorAll('[data-stufe-behalten]')) {
+    knopf.addEventListener('click', () => {
+      stufenkonflikte.splice(Number(knopf.dataset.stufeBehalten), 1);
+      importErgebnisZeichnen([]);
+    });
+  }
+}
+
 function zuordnungVerdrahten() {
   const bereich = $('#import-ergebnis');
 
@@ -1048,7 +1137,7 @@ function zuordnungVerdrahten() {
     for (const offen of offeneImporte) kd.uebergabeAlsNeuesKind(datei, offen.uebergabe);
     offeneImporte = [];
     merken();
-    alesZeichnen();
+    allesZeichnen();
     importErgebnisZeichnen([]);
   });
 
@@ -1077,7 +1166,7 @@ function zuordnungVerdrahten() {
 function abschliessen(nummer) {
   offeneImporte.splice(nummer, 1);
   merken();
-  alesZeichnen();
+  allesZeichnen();
   importErgebnisZeichnen([]);
 }
 

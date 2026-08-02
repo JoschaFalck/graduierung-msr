@@ -26,14 +26,19 @@ const KINDER = [
   ['Nils Behrens',   'hafen',      ['gleich', 'gleich', 'gleich']],
 ];
 
+// Belegsatz und das Kriterium, zu dem er gehört -- als Paar, nicht getrennt.
+// Vorher wurde der Text zufällig gezogen und immer über das *erste* Kriterium
+// der Stufe geschrieben; im Coaching-Bogen stand dann viermal „Ich gehe
+// respektvoll ... um" über Sätzen zum Logbuch und zum Bruchrechnen.
 const BELEGE = [
-  'Ich habe mein Fach jeden Montag aufgeräumt.',
-  'Ich habe mir vorgenommen, im Input nicht zu reden – das hat meistens geklappt.',
-  'Ich habe Finn beim Bruchrechnen geholfen, weil er es nicht verstanden hat.',
-  'Ich habe meine Wochenziele ins Logbuch geschrieben und abgehakt.',
-  'Ich habe den Klassendienst übernommen, obwohl ich nicht dran war.',
-  'Ich war zweimal zu spät mit den Aufgaben, das will ich ändern.',
-  'Ich habe in Mathe zweimal nachgefragt, statt einfach abzuschreiben.',
+  ['H5', 'Ich habe mein Fach jeden Montag aufgeräumt.'],
+  ['H6', 'Ich habe mir vorgenommen, im Input nicht zu reden – das hat meistens geklappt.'],
+  ['H3', 'Ich war zweimal zu spät mit den Aufgaben, das will ich ändern.'],
+  ['A1', 'Ich habe meine Wochenziele ins Logbuch geschrieben und abgehakt.'],
+  ['A2', 'Ich habe den Klassendienst übernommen, obwohl ich nicht dran war.'],
+  ['B2', 'Ich habe Finn beim Bruchrechnen geholfen, weil er es nicht verstanden hat.'],
+  ['B3', 'Ich habe in Mathe zweimal nachgefragt, statt einfach abzuschreiben.'],
+  ['F1', 'Ich lese jede Woche mit meinem Lernpaten aus der 5b.'],
 ];
 
 const BEGRUENDUNGEN = {
@@ -80,6 +85,7 @@ export function beispielklasse(katalog, bloecke = 3) {
   for (const [name, , weg] of KINDER) {
     const kind = datei.lernende.find((l) => l.name === name);
     const tendenz = zufall();
+    let letzterBeleg = null; // damit im Coaching-Bogen nicht viermal dasselbe steht
 
     for (let block = 0; block < bloecke; block++) {
       // Einschätzungen dieses Blocks -- immer gegen die Stufe, die damals galt
@@ -89,16 +95,15 @@ export function beispielklasse(katalog, bloecke = 3) {
 
         // ein Kind gibt zuletzt nichts ab, damit die Fehlliste etwas zeigt
         if (!(kind.name === 'Nils Behrens' && letzterZeitraum)) {
+          const beleg = belegBauen(katalog, kind.stufe, zufall, letzterBeleg);
+          letzterBeleg = beleg.kriteriumId;
           einschaetzungSetzen(datei, {
             schuelerId: kind.id, zeitraum: z, quelle: 'selbst', stufe: kind.stufe,
             bewertungen: bewertungenBauen(
               kriterienDerStufe(katalog, kind.stufe).map((k) => k.id),
               werte, zufall, tendenz + 0.15 + block * 0.04
             ),
-            beleg: {
-              kriteriumId: kriterienDerStufe(katalog, kind.stufe)[0].id,
-              text: BELEGE[Math.floor(zufall() * BELEGE.length)],
-            },
+            beleg,
           });
         }
 
@@ -138,6 +143,23 @@ export function beispielklasse(katalog, bloecke = 3) {
 
   datei.beispiel = true;
   return datei;
+}
+
+/**
+ * Ein Belegsatz, der zu seinem Kriterium passt und auf der Stufe auch gilt.
+ * Ein Kind im Hafen soll nicht über den Lernpaten schreiben.
+ *
+ * `zuletzt` bleibt außen vor: Im Hafen stehen nur drei Sätze zur Wahl, und der
+ * Coaching-Bogen zeigt vier Zeiträume nebeneinander -- ohne diese Regel stand
+ * dort schon mal viermal derselbe Satz.
+ */
+function belegBauen(katalog, stufenId, zufall, zuletzt = null) {
+  const gilt = new Set(kriterienDerStufe(katalog, stufenId).map((k) => k.id));
+  const moeglich = BELEGE.filter(([id]) => gilt.has(id));
+  const ohneWiederholung = moeglich.filter(([id]) => id !== zuletzt);
+  const auswahl = ohneWiederholung.length ? ohneWiederholung : moeglich;
+  const [kriteriumId, text] = auswahl[Math.floor(zufall() * auswahl.length)];
+  return { kriteriumId, text };
 }
 
 /** Zwei plausible Gründe aus dem Katalog, damit der Rückstufungsbogen gefüllt ist. */

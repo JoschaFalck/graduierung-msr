@@ -25,7 +25,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                74 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                78 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -176,7 +176,13 @@ und iPad wird vertikal nichts beschnitten. Zwei Fallstricke stecken darin:
 
 - `aspect-ratio` und `max-height` dürfen nicht zusammenstehen: Die beiden ziehen auch die
   Breite mit, und rechts bliebe ein weisser Streifen. Ab 75 rem Fensterbreite steht deshalb
-  eine feste `height` **statt** `aspect-ratio`.
+  eine feste `height` (17 rem) **statt** `aspect-ratio`. Nur dort wird überhaupt beschnitten.
+  Die 17 rem sind gerechnet: Die Karte ist höchstens 1152 px breit, 272 px Bandhöhe ergeben
+  darauf 4,2:1 — fast das Verhältnis, in dem `ankerplatz.jpg` ohnehin vorliegt. Mit den
+  vorherigen 15 rem waren es 4,8:1, und die beiden ungetrimmten 3:1-Bilder verloren über ein
+  Drittel ihrer Höhe: Beim Hafen ging der Schnitt mitten durch die Hausdächer. Deshalb
+  zusätzlich `object-position: center 55%` **nur** für den Hafen (`data-stufe` am Bild, gesetzt
+  in `ausweisZeichnen()`) — damit sind Häuser, Kran, Boot, Poller und Boje vollständig drin.
 - `ankerplatz.jpg` und `freie-see.jpg` kamen mit weissen Balken oben und unten aus der
   Bilderzeugung. Die sind entfernt; beide Bilder sind dadurch flacher als 3:1 und werden von
   `object-fit: cover` seitlich statt vertikal beschnitten -- bei diesen Panoramen unkritisch.
@@ -312,6 +318,26 @@ das ist der Gesprächsstoff.
 `Bogen drucken` nutzt die Druckansicht des Browsers: Leisten und Navigation verschwinden,
 und unter das Formular kommt eine Unterschriftenzeile.
 
+### Vereinbarungen gehören zu jedem Ausgang
+
+Das Feld war lange an „Rückstufung" gekoppelt. Nach KONZEPT Abschnitt 2 und dem Datenmodell in
+Abschnitt 7 gehört die Vereinbarung aber zu allen drei Ausgängen -- bei „Stufe halten" ist sie
+sogar das eigentliche Ergebnis des Gesprächs. `entscheidungWechsel()` blendet sie deshalb nicht
+mehr aus, sondern wechselt nur die Frage im Feld (`VEREINBARUNG_FRAGE`). Pflichtfeld ist sie
+bewusst nicht -- das wäre eine pädagogische Festlegung, keine technische.
+
+### Belegsätze in den Beispieldaten
+
+`BELEGE` in `beispieldaten.js` ist eine Liste aus Paaren `[kriteriumId, Satz]`, und `belegBauen()`
+zieht nur aus dem, was auf der Stufe des Kindes gilt. Vorher stand die `kriteriumId` fest auf dem
+ersten Kriterium der Stufe, während der Text zufällig kam -- im Bogen stand dann „Ich gehe
+respektvoll ... um" über einem Satz zum Bruchrechnen.
+
+Zwei Fallstricke stecken darin: Im Hafen stehen nur drei Sätze zur Wahl, der Bogen zeigt aber
+vier Zeiträume nebeneinander -- deshalb schließt `belegBauen()` das zuletzt gezogene Kriterium
+aus. Und für eine neue Stufe braucht es auch einen neuen Satz, sonst greifen die Kinder dort
+immer auf geerbte Kriterien zurück.
+
 ## Noch offen in der Lehrkraft-Anwendung
 
 - **Personalisierter Ausweis zum Drucken** (die Ausweiskarte mit Namen des Kindes)
@@ -320,6 +346,18 @@ und unter das Formular kommt eine Unterschriftenzeile.
 - **Automatische Wochen-Schnappschüsse** (siehe KONZEPT.md Abschnitt 6) -- „Kopie speichern
   unter …" gibt es, ein automatischer Rhythmus fehlt noch
 - Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)
+
+**Stufe klären beim Import:** Meldet ein Kind eine andere Stufe, als die Klassendatei führt
+(`stufeWeicht`), steht das im Import unter *Stufe klären* mit zwei Knöpfen. *„<Stufe>
+übernehmen"* macht die gemeldete zur geführten, *„Kind hat sich vertan"* lässt alles wie es ist.
+Die Abweichung heißt nämlich nicht zwangsläufig, dass die Klassendatei recht hat: Ein Kind kann
+sich bei der Einrichtung vertippt haben, und es kann außerhalb der App aufgestiegen sein.
+
+Die Liste liegt in `stufenkonflikte`, nicht in der Ergebnisliste des einen Imports -- sonst
+verschwände sie beim nächsten Neuzeichnen. Bleibt es bei der geführten Stufe, muss das Kind sie
+auf seinem Gerät umstellen; tut es das nicht, steht der Punkt beim nächsten Import wieder da,
+und das ist die gewünschte Erinnerung. Der QR-Rückweg aus KONZEPT Abschnitt 5, der die Stufe von
+sich aus zurückbrächte, ist weiterhin nicht gebaut.
 
 **Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind),
 über *+ Kind hinzufügen* oder aus den ersten Selbsteinschätzungen. In allen drei Wegen gilt
