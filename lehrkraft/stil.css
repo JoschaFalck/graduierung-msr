@@ -188,7 +188,20 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 }
 
 .inhalt { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1.5rem 0.5rem; }
+/* Fuer das eine, was in dieser App wirklich unumkehrbar ist: ein vergessenes
+   Passwort. Bewusst auffaelliger als `.hinweis` -- als leiser Grautext stand
+   die Warnung schon da und wurde ueberlesen. */
+.warnfeld {
+  margin: 0.75rem 0; padding: 0.7rem 0.9rem;
+  font-size: 0.92rem; line-height: 1.5;
+  background: var(--flaeche); border-left: 4px solid var(--warnung);
+  border-radius: 8px; box-shadow: var(--schatten);
+}
+
 .werkzeuge { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+/* Umbenennen/Entfernen stehen unter dem Coaching-Knopf und sollen ihm nicht
+   die Aufmerksamkeit nehmen -- deshalb Abstand nach oben und schmal. */
+.werkzeuge-kind { margin-top: 1rem; flex-wrap: wrap; }
 
 /* ---------- Klassenliste ---------- */
 
@@ -506,9 +519,62 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 
 /* ---------- Druck: nur der Bogen ---------- */
 
+/* ---------- Auskunft nach Art. 15 DSGVO ----------
+   Ein Blatt zum Aushaendigen: alles, was ueber ein Kind gespeichert ist.
+   Auf Papier gedacht, deshalb schmale Bahn und ruhige Typografie. */
+
+.auskunft { max-width: 52rem; margin-top: 1rem; }
+.auskunft h1 { margin: 0 0 0.2rem; font-size: 1.5rem; }
+.auskunft h2 {
+  margin: 2rem 0 0.6rem; font-size: 1.05rem;
+  padding-bottom: 0.3rem; border-bottom: 1px solid var(--linie);
+}
+.auskunft-unter { margin: 0 0 1.25rem; color: var(--text-leise); font-size: 0.92rem; }
+
+.auskunft-kopf { display: grid; gap: 0.35rem; margin: 0; }
+@media (min-width: 44rem) { .auskunft-kopf { grid-template-columns: 1fr 1fr; } }
+.auskunft-kopf > div {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 0.8rem; background: var(--flaeche);
+  border-radius: 8px; box-shadow: var(--schatten);
+}
+.auskunft-kopf dt { color: var(--text-leise); }
+.auskunft-kopf dd { margin: 0; font-weight: 600; text-align: right; }
+
+.auskunft-tabelle { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.auskunft-tabelle th, .auskunft-tabelle td {
+  padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--linie);
+}
+.auskunft-tabelle thead th { color: var(--text-leise); font-size: 0.85rem; }
+
+.auskunft-block {
+  padding: 0.7rem 0.9rem; margin-bottom: 0.5rem;
+  background: var(--flaeche); border-radius: 8px; box-shadow: var(--schatten);
+  break-inside: avoid;
+}
+.auskunft-block p { margin: 0 0 0.4rem; font-size: 0.92rem; }
+.auskunft-block p:last-child { margin-bottom: 0; }
+.auskunft-block-kopf { font-weight: 600; }
+.auskunft-werte { margin: 0 0 0.4rem; padding-left: 1.1rem; font-size: 0.9rem; line-height: 1.5; }
+.auskunft-beleg { color: var(--text-leise); }
+.auskunft-klein { font-size: 0.85rem; color: var(--text-leise); }
+.auskunft-leer { color: var(--text-leise); font-style: italic; }
+.auskunft-erlaeuterung { padding-left: 1.1rem; font-size: 0.9rem; line-height: 1.6; }
+.auskunft-fussnote {
+  margin-top: 1rem; font-size: 0.88rem; color: var(--text-leise);
+  padding: 0.6rem 0.8rem; background: var(--grund); border-radius: 8px;
+}
+
 @media print {
   .beispielleiste, .leiste, .navigation, .kopf-logo-feld, .leer-bild,
-  #coaching-zurueck, #coaching-drucken, .hinweis { display: none !important; }
+  #coaching-zurueck, #coaching-drucken,
+  #auskunft-zurueck, #auskunft-drucken, .hinweis { display: none !important; }
+
+  /* Die Auskunft steht auf eigenem Papier: Der Kopf mit Klasse und Schuljahr
+     gehoert nicht darueber, die Angaben stehen im Blatt selbst. */
+  .auskunft { max-width: none; margin-top: 0; }
+  .auskunft-kopf > div, .auskunft-block { box-shadow: none; border: 1px solid #ccc; }
+  .auskunft-fussnote { border: 1px solid #ccc; }
   body { background: #fff; font-size: 11pt; }
   .kopf { background: none; color: #000; padding: 0; border-bottom: 2px solid #000; }
   .inhalt { max-width: none; padding: 0; }
@@ -552,6 +618,18 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
   padding: 0.5rem 0.8rem; background: var(--flaeche);
   border-radius: 8px; box-shadow: var(--schatten);
 }
+.sicherung-liste {
+  list-style: none; margin: 0.6rem 0 0; padding: 0;
+  display: grid; gap: 0.2rem;
+  font-size: 0.85rem; color: var(--text-leise);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.zuletzt { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--linie); }
+.zuletzt-kopf { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--text-leise); }
+.zuletzt .knopf-gross { margin-top: 0; }
+.zuletzt .knopf-winzig { margin-top: 0.5rem; }
+
 .angaben dt { color: var(--text-leise); }
 .angaben dd { margin: 0; font-weight: 600; text-align: right; }
 
@@ -637,3 +715,21 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 .schritte em { font-style: normal; font-weight: 600; color: var(--text); }
 code { padding: 0.1rem 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
        font-size: 0.88em; background: var(--grund); border-radius: 5px; }
+
+/* ---------- Rückweg aufs Kindergerät (QR) ---------- */
+
+.stufencode {
+  margin-top: 1.25rem; padding: 1.1rem 1.2rem;
+  text-align: center;
+  background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+}
+.stufencode h3 { margin: 0 0 0.3rem; font-size: 1.1rem; }
+.stufencode .lang { margin: 0 auto 1rem; max-width: 32rem; }
+.stufencode svg { width: min(18rem, 70vw); height: auto; }
+/* Die Adresse steht als Rückfall darunter -- klemmt die Kamera, tippt man sie
+   ab. Umbruch erzwingen, sonst schiebt sie die Karte auseinander. */
+#stufencode-adresse { overflow-wrap: anywhere; margin: 0.6rem auto 0; max-width: 32rem; }
+.stufencode .knopf-leise { max-width: 14rem; margin-inline: auto; }
+
+@media print { .stufencode { display: none; } }

@@ -901,3 +901,35 @@ button {
   line-height: 1.5;
   color: var(--text-leise);
 }
+
+/* ---------- Neue Stufe per QR-Code ---------- */
+
+.neue-stufe-karte {
+  margin: 1.25rem 0;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: #fff;
+  background: var(--stufe, var(--text));
+  border-radius: var(--radius);
+}
+.neue-stufe-symbol { width: 4.5rem; height: 4.5rem; object-fit: contain; filter: invert(1) brightness(1.15); }
+.neue-stufe-name { margin: 0.5rem 0 0.2rem; font-size: 1.4rem; font-weight: 700; }
+.neue-stufe-motto { margin: 0; font-size: 0.95rem; opacity: 0.9; }
+
+.neue-stufe-vereinbarung,
+.vereinbarung {
+  margin: 1.25rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--flaeche);
+  border-left: 4px solid var(--stufe);
+  border-radius: 10px;
+  box-shadow: var(--schatten);
+}
+.neue-stufe-kopf,
+.vereinbarung-kopf {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text-leise);
+}
+.neue-stufe-vereinbarung p:last-child,
+.vereinbarung p:last-child { margin: 0; }

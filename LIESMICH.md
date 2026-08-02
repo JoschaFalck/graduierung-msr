@@ -14,6 +14,10 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     uebergabe.js             Format der Datei Kind → Lehrkraft (erzeugen, benennen, prüfen)
     tresor.js                Verschlüsselung der Klassendatei (AES-GCM, PBKDF2)
     klassendatei.js          Datenmodell: Lernende, Zeiträume, Einschätzungen, Import
+    griffe.js                merkt Dateigriffe zwischen Sitzungen (IndexedDB)
+    speicher.js              wo die Klassendatei liegt -- die Schnittstelle aus KONZEPT 7
+    qr.js                    QR-Code erzeugen (eigener Encoder, keine Bibliothek)
+    kataloge/                eingefrorene Katalogfassungen, je Version eine Datei
   schueler/
     index.html               Ersteinrichtung, Ausweis, Selbsteinschätzung, Verlauf
     schueler.js
@@ -25,7 +29,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                78 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                90 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -104,6 +108,20 @@ sofort da, sobald WLAN vorhanden ist; offline läuft die App trotzdem. Cache-zue
 würde aber alte Fassungen auf 25 iPads festhalten, die man nicht einzeln entstauben kann.
 
 Bei inhaltlichen Änderungen die Konstante `FASSUNG` in `sw.js` hochzählen.
+
+**Beide** Anwendungen melden den Worker an (`offlineBereitstellen()` in `schueler.js` und in
+`lehrkraft.js`), mit Geltungsbereich `../` — ein Worker in `schueler/` könnte `gemeinsam/`
+nicht abfangen. Lange tat das nur die Schüleranwendung, obwohl `sw.js` die Lehrkraft-Dateien
+im `VORRAT` mitführte; die Lehrkraft-App war damit als einzige nicht offline lauffähig.
+
+Zwischengespeichert wird ausschließlich die Anwendung. Die Klassendaten liegen als Datei auf
+der Festplatte und laufen nie durch `fetch` — sie können gar nicht in einen Cache geraten.
+
+**Beim lokalen Testen wichtig:** Weil der Geltungsbereich `../` ist, liefert der Worker auch
+die Lehrkraft-Dateien aus. Nach einer Änderung kann deshalb das alte Stylesheet erscheinen,
+obwohl der Miniserver längst das neue ausliefert. Dann in der Konsole abmelden:
+`navigator.serviceWorker.getRegistrations().then(r => r.forEach(x => x.unregister()))`, Caches
+leeren, neu laden. Im Betrieb greift das nicht — dort gilt Netz zuerst.
 
 ## Noch offen in der Schüleranwendung
 
@@ -293,6 +311,59 @@ Ohne diese Kette könnte die nächste Änderung einen zweiten Schreibstrom auf d
 öffnen, während der erste noch läuft -- das Ergebnis wäre eine halb geschriebene Klassendatei,
 und die ist verschlüsselt, also nicht von Hand zu retten.
 
+### Wo die Datei liegt: `speicher.js`
+
+KONZEPT Abschnitt 7 verlangt den Speicherzugriff hinter einer Schnittstelle -- „heute
+`DateiSpeicher`, später eventuell `SchulcloudSpeicher`". `lehrkraft.js` spricht deshalb nirgends
+mehr direkt mit der File System Access API; es kennt nur `speicher.lesen()`,
+`speicher.schreiben()`, `speicher.kopieAblegen()` und die Ordnerfunktionen.
+
+Was bewusst **nicht** im Speicher steht, weil es Sache der Anwendung ist: die Verschlüsselung,
+die Reihenfolge der Schreibvorgänge (`schreibvorgang`), die Zählung offener Änderungen und die
+Entscheidung, ob überhaupt automatisch gesichert wird. Der Speicher kennt nur Bytes, Namen und
+Orte.
+
+`schreiben()` gibt zurück, *was* passiert ist: `datei`, `download` oder `abgebrochen`. Genau
+diese Unterscheidung braucht die Anwendung -- bei `abgebrochen` bleibt der Änderungszähler
+stehen, weil nichts geschrieben wurde.
+
+### Gemerkte Griffe und die Wochensicherung
+
+`gemeinsam/griffe.js` legt Dateigriffe in IndexedDB ab. Ein `FileSystemHandle` lässt sich nicht
+als Text speichern, wohl aber strukturiert klonen — deshalb IndexedDB und nicht localStorage.
+Gespeichert wird ein **Verweis samt Berechtigung**, nie ein Inhalt.
+
+Zwei Griffe liegen dort:
+
+| Schlüssel | Wofür |
+|---|---|
+| `graduierung.lehrkraft.dateigriff` | die zuletzt geöffnete Klassendatei |
+| `graduierung.lehrkraft.sicherungsordner` | der Ordner für die Wochenkopien |
+
+**Zuletzt geöffnet** steht auf der Einstiegsseite: ein Klick, Passwort, fertig — kein Dateidialog
+(das ist die Zusage aus KONZEPT Abschnitt 6). Nach der Berechtigung wird bewusst erst **im Klick**
+gefragt. Außerhalb einer Nutzergeste beantwortet der Browser `requestPermission()` ohne Rückfrage
+mit Nein, und der gemerkte Griff wäre verbrannt. Aus demselben Grund läuft
+`wochensicherungPruefen()` direkt hinter dem Absenden des Passworts.
+
+**Die Wochensicherung** legt beim Öffnen alle `SICHERUNG_TAGE` Tage eine datierte Kopie im
+gewählten Ordner ab und behält die letzten `SICHERUNGEN_BEHALTEN`. Warum ein eigener Ordner und
+nicht „neben der Arbeitsdatei" wie im Konzept: Ein Dateigriff kennt sein Verzeichnis nicht, die
+Anwendung kann von sich aus nicht daneben schreiben.
+
+Zwei Dinge, die man leicht kaputtmacht:
+
+- `altSicherungenLoeschen()` fasst **nur** an, was zum Namensmuster dieser Klasse passt
+  (`Klasse-<klasse>-<schuljahr>_JJJJ-MM-TT.gradu`). Fremde Dateien im Ordner — auch Sicherungen
+  anderer Klassen — bleiben unberührt. Der Klassenname geht durch `regexSicher()`, weil „8b
+  (Beispiel)" Klammern enthält.
+- Sortiert wird nach Dateinamen. Das geht nur auf, weil der Name auf ein ISO-Datum endet.
+
+Datenschutzlich ist das kein zweiter Schauplatz: Die Kopien sind dieselben verschlüsselten Bytes
+wie die Arbeitsdatei. Wo sie liegen, ist deshalb gleichgültig — genau die Zusage aus KONZEPT 9.
+In Safari gibt es keinen Ordnerzugriff; dort sagt der Bereich das und verweist auf „Klassendaten
+lokal sichern".
+
 ### Der Tresor
 
 `tresor.js` gibt nicht mehr Passphrasen entgegen, sondern einen **Tresor**: Salz plus den daraus
@@ -313,7 +384,121 @@ Eine Prüfung in `pruefen.mjs` sichert genau das ab.
 
 Nebeneffekt: Die Passphrase steht nach dem Öffnen nirgends mehr. `lehrkraft.js` hält statt
 `passwort` nur noch den Tresor, dessen Schlüssel nicht auslesbar ist (`extractable: false`),
-und leert das Eingabefeld. Ein Passwortwechsel ist damit weiterhin nicht vorgesehen.
+und leert das Eingabefeld.
+
+### Passwort ändern
+
+`passwortWechseln()` im Bereich *Datei*. Technisch heißt das: **neues Salz, neuer Schlüssel,
+Datei einmal komplett neu geschrieben** — vorhandene Bytes lassen sich nicht nachträglich
+umschlüsseln.
+
+Drei Entscheidungen stecken darin:
+
+- **Das alte Passwort wird nicht abgefragt.** Es steht nach dem Öffnen nirgends mehr, ließe sich
+  also nur durch einen zweiten Entschlüsselungsversuch auf die Datei prüfen. Der Aufwand lohnt
+  nicht: Wer im Bereich *Datei* steht, hat die Klasse bereits offen — ein neues Passwort
+  verschafft ihm keinen Zugang, den er nicht schon hätte.
+- **Der neue Tresor gilt erst, wenn das Schreiben geklappt hat.** Bricht der Speicherort-Dialog
+  ab, wird auf den alten zurückgeschaltet. Ohne diese Rückabwicklung läge in der Datei noch das
+  alte Passwort, während die Anwendung schon das neue annähme — beim nächsten Öffnen käme
+  „Passwort falsch", und die Klasse wäre für ein Schuljahr zu.
+- **Ältere Sicherungskopien behalten ihr altes Passwort.** Sie tragen den Schlüssel, der beim
+  Ablegen galt. Steht als Hinweis über dem Formular, sonst wäre es eine böse Überraschung.
+
+Ohne beschreibbaren Dateigriff (Safari) entsteht ein Download, den man über die bisherige Datei
+legen muss — die Erfolgsmeldung sagt das dann ausdrücklich.
+
+Die Warnung an der Stelle, wo die Passphrase gesetzt wird, ist ein `.warnfeld` mit rotem
+Streifen. Sie stand vorher als leiser `.hinweis` da; was hier schiefgeht, ist aber das einzige
+wirklich Unumkehrbare in dieser Anwendung.
+
+## Auskunft nach Art. 15 DSGVO
+
+Im Verlauf eines Kindes: ein Blatt mit allem, was über es gespeichert ist — Stammdaten,
+Stufenverlauf, sämtliche Selbst- und Fremdeinschätzungen im Klartext (Kriterium für Kriterium,
+gegen die *damals* gültige Stufe aufgelöst), alle Gespräche und ein Abschnitt zu Herkunft,
+Zweck, Empfängern, Speicherort, Dauer und Betroffenenrechten.
+
+**Bewusst kein Dateidownload.** Eine Textdatei mit Verhaltensdaten läge unverschlüsselt im
+Downloads-Ordner und wanderte auf einem Mac mit synchronisiertem Schreibtisch unbemerkt in die
+iCloud — genau die Falle aus KONZEPT Abschnitt 9. Für Ausdrucke macht das Konzept die Ausnahme
+(„die gehören gedruckt und nicht abgelegt"), für Dateien nicht. Deshalb Druckansicht.
+
+Ist das Schuljahr bereits abgeschlossen, sagt eine Fußnote auf dem Blatt, wann gelöscht wurde
+und dass die Auskunft nur den verbliebenen Bestand zeigt.
+
+## Schuljahr abschließen
+
+Im Bereich *Datei*. `rohdatenLoeschen()` in `klassendatei.js` löscht alle Einschätzungen samt
+Belegsätzen. Die Coachings bleiben als **Gerüst** stehen — Datum, Entscheidung, von welcher auf
+welche Stufe — denn daraus leitet `stufenverlauf()` die Historie ab, die laut KONZEPT 11.3
+ausdrücklich bleiben soll. „Löschen ist hier eine Funktion, kein Versäumnis."
+
+Die **Freitexte der Gespräche** (Begründungen, Vereinbarungen, Rückstufungsgründe) hängen an
+einem eigenen Häkchen und gehen nicht automatisch mit. Sie sind zwar genau das, was KONZEPT 11.3
+meint mit „ein digitales Register, das jahrelang ‚hält sich nicht an Klassenregeln' konserviert" —
+ob sie weg dürfen, hängt aber an der Aufbewahrungsfrist für Rückstufungsdokumente, und die Frage
+steht im Konzept offen. Deshalb entscheidet das der Aufrufer, nicht `rohdatenLoeschen()`.
+
+Vor dem Löschen steht eine Bilanz, die **beides** nennt: was verschwindet und was bleibt. „Löschen"
+allein sagt nicht, dass die Stufenhistorie erhalten bleibt, und genau das ist hier der Punkt.
+`datei.abschluss` hält Datum und Umfang fest.
+
+**Achtung beim Erweitern:** Die Fremdeinschätzung ruft bewusst nicht `allesZeichnen()` auf,
+sondern zählt nur nach — sonst springt beim Tippen der Fokus. Der Datei-Bereich stand dadurch
+auf einem veralteten Stand. Er frischt jetzt beim Öffnen auf (`navigationVerdrahten()`). Wer dort
+weitere Zahlen anzeigt, muss das mitbedenken.
+
+## Der Rückweg aufs Kindergerät (QR)
+
+Nach dem Coaching zeigt die Lehrkraft einen QR-Code, das Kind scannt ihn mit der iPad-Kamera und
+hat die neue Stufe auf dem eigenen Gerät (KONZEPT Abschnitt 5). Damit verschwindet der letzte
+große Bruch: Vorher füllte ein hochgestuftes Kind so lange den falschen Kriteriensatz aus, bis es
+seine Stufe von Hand umstellte.
+
+**Warum kein Decoder gebraucht wird:** Die iPad-Kamera erkennt QR-Codes von sich aus und öffnet
+die Adresse. Der Code enthält nur `…/schueler/#s=<stufe>&v=<vereinbarung>`. Bewusst ein Fragment
+und kein `?`-Parameter -- Fragmente werden nie an einen Server gesendet, dieselbe Überlegung wie
+beim Klassen-Link.
+
+**`gemeinsam/qr.js`** ist ein eigener Encoder: Byte-Modus, Fehlerkorrektur M, Fassungen 1 bis 10,
+also bis 213 Zeichen. Fehlerkorrektur M statt L, weil der Code schräg und bei schlechtem Licht
+gescannt wird. Ausgegeben wird SVG, damit er beim Vergrößern und Drucken scharf bleibt.
+
+Die Tabelle `BAUART` stammt aus ISO/IEC 18004, Tabelle 9. **Dort nichts raten:** Eine falsche
+Zeile ergibt einen Code, der tadellos aussieht und sich nicht lesen lässt. Geprüft wurde gegen
+`BarcodeDetector` -- jede der zehn Fassungen an ihrer Kapazitätsgrenze.
+
+**Übernommen wird nie still.** Das Kind sieht die neue Stufe, das Motto und die Vereinbarung und
+sagt Ja oder „Nicht jetzt". Ein Code, der von selbst am Profil dreht, wäre auch der bequemste
+Weg für einen Scherz auf dem Pausenhof. Nach der Entscheidung leert `history.replaceState()` das
+Fragment, sonst stellt ein Neuladen dieselbe Frage noch einmal.
+
+Ist die Vereinbarung so lang, dass kein Code mehr passt, wird sie weggelassen und der Code trägt
+nur die Stufe -- lieber das als gar keinen Code.
+
+## Katalogfassungen
+
+`katalog.json` ist die heute gültige Fassung. Daneben liegt in `kataloge/` je Version ein
+eingefrorenes Archiv. Eine Klassendatei trägt in `katalogVersion`, mit welcher sie angelegt
+wurde; `katalogFassung()` lädt genau die.
+
+Warum das nötig ist (KONZEPT Abschnitt 7): Ein im Oktober gesetztes Kreuz muss weiter auf den
+Text zeigen, der damals danebenstand. Sonst ändert sich rückwirkend, was ein Kind angekreuzt
+hat -- bei einer Verhaltensbeurteilung kein Schönheitsfehler.
+
+**Wenn du `katalog.json` änderst:**
+
+1. die bisherige Fassung nach `kataloge/katalog-<alte-version>.json` kopieren,
+2. `version` in `katalog.json` hochzählen,
+3. die neue Fassung ebenfalls als Archiv ablegen,
+4. beides in den `VORRAT` in `sw.js` eintragen.
+
+Eine Prüfung wacht darüber, dass die laufende Fassung archiviert ist und inhaltlich
+übereinstimmt. In der Lehrkraft-Anwendung sind `katalogAktuell` (heute ausgeliefert) und
+`katalog` (gilt für die geöffnete Datei) getrennt; weichen sie ab, sagt der Datei-Bereich das
+und bietet das Umstellen als Entscheidung an. Fehlt ein Archiv, werden die heutigen Texte
+gezeigt und auch das steht dort.
 
 ## Eine Wahrheit je Sache
 
@@ -369,9 +554,6 @@ immer auf geerbte Kriterien zurück.
 - **Personalisierter Ausweis zum Drucken** (die Ausweiskarte mit Namen des Kindes)
 - **Unterschriften**: Der gedruckte Bogen hat eine Unterschriftenzeile, in der Anwendung
   selbst wird nichts signiert -- unterschrieben wird auf Papier
-- **Automatische Wochen-Schnappschüsse** (siehe KONZEPT.md Abschnitt 6) -- „Kopie speichern
-  unter …" gibt es, ein automatischer Rhythmus fehlt noch
-- Klassenliste einzeln bearbeiten (Umbenennen, Entfernen)
 
 **Stufe klären beim Import:** Meldet ein Kind eine andere Stufe, als die Klassendatei führt
 (`stufeWeicht`), steht das im Import unter *Stufe klären* mit zwei Knöpfen. *„<Stufe>
@@ -384,6 +566,14 @@ verschwände sie beim nächsten Neuzeichnen. Bleibt es bei der geführten Stufe,
 auf seinem Gerät umstellen; tut es das nicht, steht der Punkt beim nächsten Import wieder da,
 und das ist die gewünschte Erinnerung. Der QR-Rückweg aus KONZEPT Abschnitt 5, der die Stufe von
 sich aus zurückbrächte, ist weiterhin nicht gebaut.
+
+**Umbenennen und Entfernen** stehen im Verlauf eines Kindes, nicht in der Übersicht: Beides
+passiert selten, und Entfernen löscht den ganzen Verlauf mit — wer dort steht, hat ihn gerade
+vor sich. `lernendeUmbenennen()` weist einen bereits vergebenen Namen ab, aus demselben Grund
+wie beim Anlegen. `lernendeEntfernen()` nimmt **Einschätzungen und Coachings mit**; blieben sie
+stehen, wären sie in keiner Ansicht mehr sichtbar, aber weiter in der Datei — bei
+Verhaltensdaten Minderjähriger das Gegenteil dessen, was Löschen leisten soll (KONZEPT 11.3).
+Die Rückfrage nennt vorher, wie viel daran hängt.
 
 **Wie die Klassenliste entsteht:** entweder beim Anlegen als Namensliste (eine Zeile je Kind),
 über *+ Kind hinzufügen* oder aus den ersten Selbsteinschätzungen. In allen drei Wegen gilt

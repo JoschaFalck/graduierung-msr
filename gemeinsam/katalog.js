@@ -2,19 +2,50 @@
 // Wird von der Schüler- und der Lehrkraft-Anwendung genutzt.
 
 let geladen = null;
+const fassungen = new Map(); // Version -> Katalog
 
-/** Lädt katalog.json (einmalig, danach aus dem Cache). */
+/** Lädt katalog.json, also die heute gültige Fassung (einmalig, dann aus dem Cache). */
 export async function katalogLaden(basisPfad = '../gemeinsam') {
   if (geladen) return geladen;
-  const antwort = await fetch(`${basisPfad}/katalog.json`);
-  if (!antwort.ok) throw new Error(`Katalog nicht ladbar (${antwort.status})`);
-  geladen = pruefen(await antwort.json());
+  geladen = pruefen(await holen(`${basisPfad}/katalog.json`));
+  fassungen.set(geladen.version, geladen);
   return geladen;
+}
+
+/**
+ * Lädt eine bestimmte Fassung aus `kataloge/`.
+ *
+ * Wozu: Eine Klassendatei trägt die Fassung, mit der sie angelegt wurde. Ändern
+ * sich die Kriterien im Februar, muss ein im Oktober gesetztes Kreuz weiter auf
+ * den Text zeigen, der damals danebenstand -- sonst ändert sich rückwirkend,
+ * was ein Kind angekreuzt hat (KONZEPT Abschnitt 7).
+ *
+ * Gibt `null` zurück, wenn die Fassung nicht archiviert ist. Das ist kein
+ * Fehler, sondern eine Lage, die der Aufrufer anzeigen soll -- abstürzen wäre
+ * die schlechteste Antwort auf eine fehlende Archivdatei.
+ */
+export async function katalogFassung(basisPfad, version) {
+  if (version == null) return katalogLaden(basisPfad);
+  if (fassungen.has(version)) return fassungen.get(version);
+  try {
+    const alt = pruefen(await holen(`${basisPfad}/kataloge/katalog-${version}.json`));
+    fassungen.set(version, alt);
+    return alt;
+  } catch {
+    return null;
+  }
+}
+
+async function holen(pfad) {
+  const antwort = await fetch(pfad);
+  if (!antwort.ok) throw new Error(`Katalog nicht ladbar (${antwort.status})`);
+  return antwort.json();
 }
 
 /** Nimmt einen bereits eingelesenen Katalog entgegen (für Tests). */
 export function katalogSetzen(objekt) {
   geladen = pruefen(objekt);
+  fassungen.set(geladen.version, geladen);
   return geladen;
 }
 

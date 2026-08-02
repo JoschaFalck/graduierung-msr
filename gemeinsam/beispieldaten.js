@@ -99,6 +99,7 @@ export function beispielklasse(katalog, bloecke = 3) {
           letzterBeleg = beleg.kriteriumId;
           einschaetzungSetzen(datei, {
             schuelerId: kind.id, zeitraum: z, quelle: 'selbst', stufe: kind.stufe,
+            erstellt: `${datumFuerZeitraum(datei, z)}T09:20:00.000Z`,
             bewertungen: bewertungenBauen(
               kriterienDerStufe(katalog, kind.stufe).map((k) => k.id),
               werte, zufall, tendenz + 0.15 + block * 0.04
@@ -112,6 +113,7 @@ export function beispielklasse(katalog, bloecke = 3) {
         if (!letzterZeitraum) {
           einschaetzungSetzen(datei, {
             schuelerId: kind.id, zeitraum: z, quelle: 'fremd', stufe: kind.stufe,
+            erstellt: `${datumFuerZeitraum(datei, z)}T15:40:00.000Z`,
             bewertungen: bewertungenBauen(
               bewertungszeilen(katalog, kind.stufe).map((r) => r.id),
               werte, zufall, tendenz - 0.1 + block * 0.04

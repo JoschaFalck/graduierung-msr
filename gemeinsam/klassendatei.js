@@ -96,6 +96,58 @@ function abstand(a, b) {
   return vorige[b.length];
 }
 
+/**
+ * Benennt ein Kind um -- für Tippfehler und für Namensänderungen.
+ * Dieselbe Vorsicht wie beim Anlegen: Ein Name, den es schon gibt, machte
+ * `lernendeSuchen()` mehrdeutig, und der Import ordnete danach jede Abgabe
+ * dem erstbesten der beiden zu.
+ */
+export function lernendeUmbenennen(datei, schuelerId, name) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) throw new Error('Unbekannte Person.');
+
+  const sauber = name.trim();
+  if (!sauber) throw new Error('Der Name darf nicht leer sein.');
+
+  const belegt = datei.lernende.find(
+    (l) => l.id !== schuelerId && normal(l.name) === normal(sauber)
+  );
+  if (belegt) throw new Error(`„${belegt.name}“ steht schon in der Klassenliste.`);
+
+  kind.name = sauber;
+  datei.lernende.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  beruehren(datei);
+  return kind;
+}
+
+/**
+ * Entfernt ein Kind **mitsamt** seinen Einschätzungen und Coachings.
+ *
+ * Ohne das Mitlöschen blieben verwaiste Datensätze in der Datei stehen: in
+ * keiner Ansicht mehr sichtbar, aber vorhanden -- und das ist bei
+ * Verhaltensdaten Minderjähriger genau das Gegenteil dessen, was eine
+ * Löschfunktion leisten soll (KONZEPT 11.3).
+ *
+ * Gibt zurück, was verschwunden ist, damit der Aufrufer vorher fragen und
+ * hinterher berichten kann.
+ */
+export function lernendeEntfernen(datei, schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) throw new Error('Unbekannte Person.');
+
+  const bilanz = {
+    name: kind.name,
+    einschaetzungen: datei.einschaetzungen.filter((e) => e.schuelerId === schuelerId).length,
+    coachings: datei.coachings.filter((c) => c.schuelerId === schuelerId).length,
+  };
+
+  datei.lernende = datei.lernende.filter((l) => l.id !== schuelerId);
+  datei.einschaetzungen = datei.einschaetzungen.filter((e) => e.schuelerId !== schuelerId);
+  datei.coachings = datei.coachings.filter((c) => c.schuelerId !== schuelerId);
+  beruehren(datei);
+  return bilanz;
+}
+
 export function stufeSetzen(datei, schuelerId, stufe) {
   const kind = datei.lernende.find((l) => l.id === schuelerId);
   if (!kind) throw new Error('Unbekannte Person.');
@@ -139,12 +191,14 @@ export function einschaetzung(datei, schuelerId, zeitraum, quelle) {
   );
 }
 
-export function einschaetzungSetzen(datei, { schuelerId, zeitraum, quelle, bewertungen, beleg, stufe }) {
+export function einschaetzungSetzen(datei, { schuelerId, zeitraum, quelle, bewertungen, beleg, stufe, erstellt }) {
   const vorhanden = einschaetzung(datei, schuelerId, zeitraum, quelle);
   const eintrag = vorhanden ?? { id: kennung(), schuelerId, zeitraum, quelle };
 
   eintrag.bewertungen = { ...(eintrag.bewertungen ?? {}), ...bewertungen };
-  eintrag.erstellt = new Date().toISOString();
+  // `erstellt` gibt nur der Beispielaufbau mit, damit dort nicht bei allen
+  // zwölf Zeiträumen derselbe Tag steht -- in der Auskunft fällt das auf.
+  eintrag.erstellt = erstellt ?? new Date().toISOString();
   if (beleg) eintrag.beleg = beleg;
   if (stufe) eintrag.stufe = stufe;
 
@@ -297,6 +351,58 @@ export function coachingsVon(datei, schuelerId) {
   return datei.coachings
     .filter((c) => c.schuelerId === schuelerId)
     .sort((a, b) => b.datum.localeCompare(a.datum));
+}
+
+// ---------------------------------------------------------------- Schuljahresende
+
+/**
+ * Was verschwindet, wenn das Schuljahr abgeschlossen wird? Wird vor dem
+ * Löschen angezeigt -- „3 Einschätzungen" ist eine andere Entscheidung als
+ * „412 Einschätzungen", und auf dem Knopf sieht beides gleich aus.
+ */
+export function abschlussBilanz(datei) {
+  return {
+    einschaetzungen: datei.einschaetzungen.length,
+    belege: datei.einschaetzungen.filter((e) => e.beleg?.text).length,
+    coachings: datei.coachings.length,
+    texte: datei.coachings.filter(
+      (c) => c.begruendung || c.vereinbarungen || c.gruende?.length
+    ).length,
+  };
+}
+
+/**
+ * Löscht die Rohdaten eines Schuljahres und behält die Stufenhistorie --
+ * „Löschen als Funktion, nicht als Versäumnis" (KONZEPT 11.3).
+ *
+ * Weg sind alle Einschätzungen samt Belegsätzen. Die Coachings bleiben als
+ * Gerüst stehen (Datum, Entscheidung, von welcher auf welche Stufe), denn
+ * daraus leitet sich `stufenverlauf()` ab -- ohne sie wäre auch die Historie
+ * weg, die ausdrücklich bleiben soll.
+ *
+ * `texte` entscheidet über die Freitexte der Gespräche: Begründungen,
+ * Vereinbarungen und Rückstufungsgründe. Genau die sind das, was KONZEPT 11.3
+ * meint mit „ein digitales Register, das vier Jahre lang ‚hält sich nicht an
+ * Klassenregeln' konserviert". Ob sie weg dürfen, hängt aber an einer Frage,
+ * die dort offen steht (Aufbewahrungsfrist für Rückstufungsdokumente) --
+ * deshalb entscheidet der Aufrufer, nicht diese Funktion.
+ */
+export function rohdatenLoeschen(datei, { texte = false } = {}) {
+  const bilanz = abschlussBilanz(datei);
+
+  datei.einschaetzungen = [];
+
+  if (texte) {
+    for (const c of datei.coachings) {
+      c.begruendung = '';
+      c.vereinbarungen = '';
+      c.gruende = [];
+    }
+  }
+
+  datei.abschluss = { datum: heute(), texteGeloescht: !!texte };
+  beruehren(datei);
+  return { ...bilanz, texteGeloescht: !!texte };
 }
 
 // ---------------------------------------------------------------- Hilfen

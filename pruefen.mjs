@@ -20,6 +20,20 @@ test('14 Kriterien, 4 Stufen, 3 Skalenwerte', () => {
   assert.equal(katalog.stufen.length, 4);
   assert.equal(katalog.skala.length, 3);
 });
+// KONZEPT 7: Ein im Oktober gesetztes Kreuz muss weiter auf den Text zeigen,
+// der damals danebenstand. Dafür liegt jede Fassung als Archiv daneben.
+test('die laufende Fassung ist archiviert und deckungsgleich', () => {
+  const archiv = JSON.parse(
+    readFileSync(`${BASIS}/kataloge/katalog-${katalog.version}.json`, 'utf8')
+  );
+  assert.equal(archiv.version, katalog.version);
+  // Der Hinweistext darf abweichen (er sagt, dass es ein Archiv ist) --
+  // alles Inhaltliche muss gleich sein, sonst zeigt das Archiv etwas anderes.
+  for (const feld of ['skala', 'stufen', 'kriterien']) {
+    assert.deepEqual(archiv[feld], katalog[feld], `${feld} weicht vom Archiv ab`);
+  }
+});
+
 test('IDs sind eindeutig', () => {
   const ids = katalog.kriterien.map(k => k.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -265,6 +279,40 @@ test('Fremdeinschätzung liegt neben der Selbsteinschätzung', () => {
   assert.equal(kd.einschaetzung(datei, lea.id, 1, 'fremd').bewertungen.H1, 'teilweise');
   assert.equal(kd.einschaetzung(datei, lea.id, 1, 'selbst').bewertungen.H1, 'erreicht');
 });
+test('Umbenennen zieht die Sortierung nach', () => {
+  const kind = kd.lernendeUmbenennen(datei, lea.id, 'Zoe Winter');
+  assert.equal(kind.name, 'Zoe Winter');
+  assert.deepEqual(datei.lernende.map(l => l.name), ['Ali Demir', 'Zoe Winter']);
+  kd.lernendeUmbenennen(datei, lea.id, 'Lea Müßig'); // zurück für die folgenden Prüfungen
+});
+
+test('Umbenennen auf einen vergebenen Namen wird abgewiesen', () => {
+  assert.throws(() => kd.lernendeUmbenennen(datei, lea.id, 'ali demir'), /Klassenliste/);
+  assert.throws(() => kd.lernendeUmbenennen(datei, lea.id, '   '), /leer/);
+  assert.equal(datei.lernende.find(l => l.id === lea.id).name, 'Lea Müßig');
+});
+
+// Verwaiste Einschätzungen wären in keiner Ansicht mehr sichtbar, aber weiter
+// in der Datei -- bei Verhaltensdaten Minderjähriger das Gegenteil von Löschen.
+test('Entfernen nimmt Einschätzungen und Coachings mit', () => {
+  const opfer = kd.lernendeAnlegen(datei, 'Timo Probe', 'hafen');
+  kd.einschaetzungSetzen(datei, { schuelerId: opfer.id, zeitraum: 1, quelle: 'selbst',
+    bewertungen: { H1: 'erreicht' } });
+  kd.coachingEintragen(datei, { schuelerId: opfer.id, zeitraum: 4, entscheidung: 'gleich',
+    nachStufe: 'hafen', begruendung: 'Bleibt vorerst im Hafen.' });
+
+  const bilanz = kd.lernendeEntfernen(datei, opfer.id);
+  assert.deepEqual([bilanz.name, bilanz.einschaetzungen, bilanz.coachings], ['Timo Probe', 1, 1]);
+  assert.equal(datei.lernende.some(l => l.id === opfer.id), false);
+  assert.equal(datei.einschaetzungen.some(e => e.schuelerId === opfer.id), false);
+  assert.equal(datei.coachings.some(c => c.schuelerId === opfer.id), false);
+});
+
+test('Entfernen lässt die übrigen Kinder unberührt', () => {
+  assert.deepEqual(datei.lernende.map(l => l.name), ['Ali Demir', 'Lea Müßig']);
+  assert.ok(kd.einschaetzung(datei, lea.id, 1, 'selbst'), 'Leas Einschätzung ist weg');
+});
+
 test('Stufenwechsel wird vermerkt', () => {
   const k = kd.stufeSetzen(datei, lea.id, 'boie');
   assert.equal(k.stufe, 'boie');
@@ -285,6 +333,60 @@ test('übernommene Stufe beendet die Abweichung', () => {
   assert.equal(danach.stufeWeicht, false);
   assert.equal(datei.lernende.find(l => l.id === vorher.schuelerId).stufe, 'freie-see');
 });
+
+console.log('\nSchuljahresende');
+{
+  // Eigene Datei, damit die Löschprüfungen den übrigen Prüfungen nicht den
+  // Datenbestand unter den Füßen wegziehen.
+  const jahr = kd.klasseAnlegen({ klasse: '8c', schuljahr: '2026/27',
+    zyklusStart: '2026-09-14', katalogVersion: katalog.version });
+  const kind = kd.lernendeAnlegen(jahr, 'Mara Testkind', 'hafen');
+  kd.einschaetzungSetzen(jahr, { schuelerId: kind.id, zeitraum: 1, quelle: 'selbst',
+    bewertungen: { H1: 'erreicht' }, beleg: { kriteriumId: 'H1', text: 'War jeden Tag pünktlich.' } });
+  kd.einschaetzungSetzen(jahr, { schuelerId: kind.id, zeitraum: 1, quelle: 'fremd',
+    bewertungen: { H1: 'teilweise' } });
+  kd.coachingEintragen(jahr, { schuelerId: kind.id, zeitraum: 4, entscheidung: 'hoch',
+    nachStufe: 'ankerplatz', begruendung: 'Trägt Verantwortung zuverlässig.',
+    vereinbarungen: 'Meldet sich in Inputphasen.', gueltigAb: '2026-11-09' });
+
+  test('Bilanz nennt vorher, was verschwindet', () => {
+    const b = kd.abschlussBilanz(jahr);
+    assert.deepEqual([b.einschaetzungen, b.belege, b.coachings, b.texte], [2, 1, 1, 1]);
+  });
+
+  test('Rohdaten weg, Stufenhistorie bleibt', () => {
+    const ergebnis = kd.rohdatenLoeschen(jahr);
+    assert.equal(ergebnis.einschaetzungen, 2);
+    assert.equal(jahr.einschaetzungen.length, 0, 'Einschätzungen sind noch da');
+    assert.equal(jahr.lernende.length, 1, 'die Kinder sollen bleiben');
+    assert.equal(jahr.coachings.length, 1, 'das Coaching-Gerüst soll bleiben');
+
+    const verlauf = kd.stufenverlauf(jahr, kind.id);
+    assert.deepEqual(verlauf.map(s => s.stufe), ['hafen', 'ankerplatz']);
+    assert.equal(verlauf.at(-1).ab, '2026-11-09');
+  });
+
+  test('ohne Zusatz bleiben die Freitexte der Gespräche stehen', () => {
+    assert.equal(jahr.coachings[0].begruendung, 'Trägt Verantwortung zuverlässig.');
+    assert.equal(jahr.coachings[0].vereinbarungen, 'Meldet sich in Inputphasen.');
+    assert.equal(jahr.abschluss.texteGeloescht, false);
+  });
+
+  test('mit Zusatz gehen auch die Freitexte, der Verlauf bleibt', () => {
+    kd.rohdatenLoeschen(jahr, { texte: true });
+    assert.equal(jahr.coachings[0].begruendung, '');
+    assert.equal(jahr.coachings[0].vereinbarungen, '');
+    assert.deepEqual(jahr.coachings[0].gruende, []);
+    assert.equal(jahr.abschluss.texteGeloescht, true);
+    assert.deepEqual(kd.stufenverlauf(jahr, kind.id).map(s => s.stufe), ['hafen', 'ankerplatz']);
+  });
+
+  test('gelöschte Klassendatei überlebt Ver- und Entschlüsseln', async () => {
+    const fach = await tresor.tresorAnlegen('Nordwind-77?');
+    const zurueckGelesen = await tresor.tresorOeffnen(await tresor.verschluesseln(jahr, fach), 'Nordwind-77?');
+    assert.deepEqual(kd.pruefen(zurueckGelesen.inhalt).abschluss, jahr.abschluss);
+  });
+}
 
 console.log('\nVerschlüsselung');
 const geheimfach = await tresor.tresorAnlegen('Seepferdchen-42!');
@@ -324,6 +426,34 @@ test('der Tresor einer geöffneten Datei schreibt weiter', async () => {
 test('Passphrase-Güte', () => {
   assert.equal(tresor.passphraseGuete('kurz').stufe, 'schwach');
   assert.equal(tresor.passphraseGuete('Seepferdchen-42!').stufe, 'gut');
+});
+
+// Der Weg hinter „Passwort ändern": frischer Tresor, Datei einmal komplett neu
+// geschrieben. Die alten Bytes lassen sich nicht nachtraeglich umschluesseln --
+// deshalb muss die neu geschriebene Datei mit dem alten Passwort scheitern.
+const neuerTresor = await tresor.tresorAnlegen('Nordwind-77?');
+const neuGeschrieben = await tresor.verschluesseln(datei, neuerTresor);
+
+test('nach dem Passwortwechsel gilt nur noch das neue Passwort', async () => {
+  assert.deepEqual(
+    (await tresor.tresorOeffnen(neuGeschrieben, 'Nordwind-77?')).inhalt,
+    JSON.parse(JSON.stringify(datei))
+  );
+  await assert.rejects(
+    () => tresor.tresorOeffnen(neuGeschrieben, 'Seepferdchen-42!'),
+    /Passwort falsch/
+  );
+  assert.notEqual(salzVon(neuGeschrieben), salzVon(bytes), 'neues Passwort braucht neues Salz');
+});
+
+// Wichtig fuer die Rueckabwicklung in `passwortWechseln()`: Schlaegt das
+// Schreiben fehl, gilt in der bereits abgelegten Datei weiterhin das alte
+// Passwort -- der alte Tresor muss sie also unveraendert oeffnen.
+test('eine früher abgelegte Datei bleibt beim alten Passwort', async () => {
+  assert.deepEqual(
+    (await tresor.tresorOeffnen(bytes, 'Seepferdchen-42!')).inhalt,
+    JSON.parse(JSON.stringify(datei))
+  );
 });
 
 

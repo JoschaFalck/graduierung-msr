@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "stand": "2026-07-26",
+  "schule": "Mittelschule Rednitzhembach",
+  "hinweis": "ARCHIV der Fassung 1, eingefroren am 02.08.2026. Nicht mehr ändern -- Klassendateien aus dieser Zeit verweisen darauf. Die lebende Fassung ist ../katalog.json.",
+  "skala": [
+    {
+      "id": "erreicht",
+      "text": "erreicht",
+      "kurz": "X",
+      "wert": 2
+    },
+    {
+      "id": "teilweise",
+      "text": "teilweise",
+      "kurz": "~",
+      "wert": 1
+    },
+    {
+      "id": "nicht",
+      "text": "noch nicht",
+      "kurz": "O",
+      "wert": 0
+    }
+  ],
+  "stufen": [
+    {
+      "id": "hafen",
+      "name": "Hafen",
+      "reihenfolge": 1,
+      "motto": "Für alle, die das Arbeiten in unserer Klasse noch kennenlernen.",
+      "farbe": "#6B8299",
+      "eigeneKriterien": [
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "H7"
+      ],
+      "privilegien": [
+        "Ich darf an meinem eigenen Platz arbeiten – allein oder mit mir zugewiesenen Lernpartnern.",
+        "Ich darf nach Absprache und unter Aufsicht mit einer Lernbegleitung verschiedene Räume nutzen.",
+        "Ich darf mein iPad für bestimmte Aufgaben nutzen."
+      ]
+    },
+    {
+      "id": "ankerplatz",
+      "name": "Ankerplatz",
+      "reihenfolge": 2,
+      "motto": "Für alle, die zeigen, dass sie Verantwortung übernehmen können.",
+      "farbe": "#2E8BA8",
+      "eigeneKriterien": [
+        "A1",
+        "A2"
+      ],
+      "privilegien": [
+        "Ich darf in Arbeitsphasen einen Platz im Klassenzimmer wählen.",
+        "Ich darf selbst entscheiden, wann ich mein iPad zur Bearbeitung von Aufgaben nutze.",
+        "Ich darf mit Erlaubnis der Lehrkraft im Flur vor dem Klassenzimmer arbeiten/lernen."
+      ]
+    },
+    {
+      "id": "boie",
+      "name": "Boie",
+      "reihenfolge": 3,
+      "motto": "Für alle, die sehr selbstständig und damit ein Vorbild sind.",
+      "farbe": "#E4933B",
+      "eigeneKriterien": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "privilegien": [
+        "Ich darf allein und im Team mit anderen „an der Boie“ arbeiten.",
+        "Ich darf in Arbeitsphasen meinen Platz selbst wählen.",
+        "Ich darf in Arbeitsphasen nach Absprache Musik über meine Kopfhörer hören."
+      ]
+    },
+    {
+      "id": "freie-see",
+      "name": "Freie See",
+      "reihenfolge": 4,
+      "motto": "Für alle, die Verantwortung übernehmen und anderen helfen!",
+      "farbe": "#16506B",
+      "eigeneKriterien": [
+        "F1",
+        "F2"
+      ],
+      "privilegien": [
+        "Ich darf meinen Arbeitsplatz frei wählen.",
+        "Ich darf digitale Medien so einsetzen, wie ich sie für mein eigenes Lernen brauche.",
+        "Ich darf meine Lernpartner ab der Boie frei wählen."
+      ]
+    }
+  ],
+  "kriterien": [
+    {
+      "id": "H1",
+      "stufe": "hafen",
+      "text": "Ich gehe respektvoll mit Lehrkräften und Mitschüler:innen um.",
+      "rueckstufung": "hat sich gegenüber Lehrkräften/Mitschülern wiederholt respektlos verhalten."
+    },
+    {
+      "id": "H2",
+      "stufe": "hafen",
+      "text": "Ich halte mich an die vereinbarten Klassenregeln.",
+      "rueckstufung": "hat die vereinbarten Klassenregeln wiederholt missachtet."
+    },
+    {
+      "id": "H3",
+      "stufe": "hafen",
+      "text": "Ich erledige meine Aufgaben zuverlässig und halte Termine ein.",
+      "rueckstufung": "hat Aufgaben unzuverlässig erledigt und/oder Termine nicht eingehalten."
+    },
+    {
+      "id": "H4",
+      "stufe": "hafen",
+      "text": "Ich gehe sorgfältig mit Materialien um.",
+      "rueckstufung": "hat wiederholt schulische Unterlagen beschädigt oder nachlässig behandelt."
+    },
+    {
+      "id": "H5",
+      "stufe": "hafen",
+      "text": "Ich halte meinen Arbeitsplatz/mein Fach ordentlich.",
+      "rueckstufung": "kümmert sich unzureichend um Ordnung am Arbeitsplatz/im Fach und hat Unterlagen wiederholt nicht richtig beschriftet und eingeordnet."
+    },
+    {
+      "id": "H6",
+      "stufe": "hafen",
+      "text": "Ich bin in Input- und Plenumsphasen aufmerksam.",
+      "rueckstufung": "war in Input- und Plenumsphasen mehrfach und trotz Ermahnung unaufmerksam."
+    },
+    {
+      "id": "H7",
+      "stufe": "hafen",
+      "text": "Ich beachte die Regeln zum Umgang mit meinem iPad.",
+      "rueckstufung": "hat die Regeln zum Umgang mit dem iPad wiederholt nicht beachtet."
+    },
+    {
+      "id": "A1",
+      "stufe": "ankerplatz",
+      "text": "Ich setze mir persönliche Ziele im Logbuch und arbeite daran.",
+      "rueckstufung": "hat sich wiederholt keine Ziele gesetzt und nicht daran gearbeitet."
+    },
+    {
+      "id": "A2",
+      "stufe": "ankerplatz",
+      "text": "Ich übernehme kleinere Aufgaben für die Klassengemeinschaft (z. B. Klassendienste).",
+      "rueckstufung": "hat die Aufgaben der Klassengemeinschaft wiederholt nicht wahrgenommen."
+    },
+    {
+      "id": "B1",
+      "stufe": "boie",
+      "text": "Ich erreiche meine eigenen Ziele.",
+      "rueckstufung": "hat die eigenen Ziele wiederholt nicht erreicht."
+    },
+    {
+      "id": "B2",
+      "stufe": "boie",
+      "text": "Ich unterstütze andere in meiner Klasse situativ beim Lernen.",
+      "rueckstufung": "hat andere trotz Aufforderung nicht beim Lernen unterstützt."
+    },
+    {
+      "id": "B3",
+      "stufe": "boie",
+      "text": "Ich reflektiere regelmäßig, was mir beim Lernen hilft, und teile meine Erfahrungen mit anderen.",
+      "rueckstufung": "ist wiederholt nicht bereit, Erfahrungen zum eigenen Lernen mit anderen zu teilen."
+    },
+    {
+      "id": "F1",
+      "stufe": "freie-see",
+      "text": "Ich begleite einen Lernpaten dauerhaft in der eigenen Klasse.",
+      "rueckstufung": "hat die Verantwortung als Lernpate nicht ausgefüllt."
+    },
+    {
+      "id": "F2",
+      "stufe": "freie-see",
+      "text": "Ich übernehme Aufgaben für die Gemeinschaft, auch über die eigene Klasse hinaus.",
+      "rueckstufung": "hat Aufgaben über die eigene Klasse hinaus wiederholt nicht wahrgenommen."
+    }
+  ]
+}

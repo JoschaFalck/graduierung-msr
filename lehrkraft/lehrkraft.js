@@ -4,21 +4,30 @@
 // mit Bogen, Entscheidung und Druckansicht.
 
 import {
-  katalogLaden, stufe, bewertungszeilen, kriterienDerStufe, zeilenwert,
+  katalogLaden, katalogFassung, stufe, bewertungszeilen, kriterienDerStufe, zeilenwert,
   praeposition, nachbarStufe, stufeNachEntscheidung, rueckstufungsgruende,
 } from '../gemeinsam/katalog.js';
 import { uebergabePruefen } from '../gemeinsam/uebergabe.js';
 import { verschluesseln, tresorAnlegen, tresorOeffnen, passphraseGuete } from '../gemeinsam/tresor.js';
+import { dateiSpeicher } from '../gemeinsam/speicher.js';
+import { qrAlsSvg } from '../gemeinsam/qr.js';
 import * as kd from '../gemeinsam/klassendatei.js';
 
 const $ = (a) => document.querySelector(a);
-const SCHLUESSEL_GRIFF = 'graduierung.lehrkraft.dateigriff';
+const SICHERUNG_TAGE = 7;      // Rhythmus aus KONZEPT Abschnitt 6
+const SICHERUNGEN_BEHALTEN = 10;
 
+// Zwei Kataloge, und der Unterschied ist wichtig:
+//   `katalogAktuell` ist die heute ausgelieferte Fassung -- daran hängen neue
+//   Klassen und die Schüleranwendung.
+//   `katalog` ist die Fassung, gegen die die *geöffnete* Klassendatei gilt.
+// Solange nichts geändert wurde, sind beide dasselbe Objekt.
+let katalogAktuell;
 let katalog;
+let katalogstand = 'aktuell'; // 'aktuell' | 'alt' | 'fehlt'
 let datei = null;      // die entschlüsselte Klassendatei
 let tresor = null;     // Salz + Schlüssel, nur im Arbeitsspeicher; der Schlüssel
                        // ist nicht auslesbar, die Passphrase steht nirgends
-let griff = null;      // FileSystemFileHandle, wo der Browser das kann
 let zeileAktiv = null; // gewählte Zeile der Fremdeinschätzung
 let offeneImporte = []; // Namen, die noch zugeordnet werden müssen
 let stufenkonflikte = []; // Kinder, deren gemeldete Stufe von der geführten abweicht
@@ -26,13 +35,23 @@ let stufenkonflikte = []; // Kinder, deren gemeldete Stufe von der geführten ab
 // ausgelassene Runden nachtragen und Gespräche vorziehen lassen.
 let zeitraumWahl = null;
 
-const kannDirektSchreiben = 'showSaveFilePicker' in window;
+/**
+ * Wohin die Klassendatei geschrieben wird -- hinter einer Schnittstelle
+ * (KONZEPT Abschnitt 7). Diese Datei spricht nirgends mehr direkt mit der
+ * File System Access API; ein `SchulcloudSpeicher` wäre ein Austausch dieser
+ * einen Zeile.
+ */
+const speicher = dateiSpeicher({
+  ablage: 'graduierung.lehrkraft.dateigriff',
+  ordnerAblage: 'graduierung.lehrkraft.sicherungsordner',
+});
 
 // ---------------------------------------------------------------- Start
 
 async function starten() {
   try {
-    katalog = await katalogLaden('../gemeinsam');
+    katalogAktuell = await katalogLaden('../gemeinsam');
+    katalog = katalogAktuell;
   } catch (fehler) {
     $('#ladefehler').textContent = `Die Anwendung konnte nicht geladen werden: ${fehler.message}`;
     $('#ladefehler').hidden = false;
@@ -45,7 +64,9 @@ async function starten() {
   fremdVerdrahten();
 
   $('#coaching-zurueck').addEventListener('click', coachingBereitZeigen);
+  $('#stufencode-zu').addEventListener('click', () => { $('#stufencode').hidden = true; });
   $('#coaching-drucken').addEventListener('click', () => window.print());
+  $('#auskunft-drucken').addEventListener('click', () => window.print());
   $('#formular-coaching').addEventListener('submit', (e) => {
     e.preventDefault();
     coachingSpeichern();
@@ -63,11 +84,30 @@ async function starten() {
   $('#kind-zurueck').addEventListener('click', () => {
     document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
   });
+  offlineBereitstellen();
+}
+
+/**
+ * Meldet den Service Worker an. `sw.js` cacht die Lehrkraft-Dateien längst mit,
+ * nur meldete ihn bisher allein die Schüleranwendung an -- die Lehrkraft-App
+ * lief deshalb als einzige nicht offline, obwohl alles dafür bereitlag.
+ *
+ * Zwischengespeichert wird ausschließlich die Anwendung selbst. Die
+ * Klassendaten liegen in einer Datei auf der Festplatte und laufen nie durch
+ * `fetch` -- sie können hier gar nicht in einen Cache geraten.
+ *
+ * Scheitert die Anmeldung (etwa über http:// im Testbetrieb), läuft alles
+ * Übrige unverändert weiter.
+ */
+function offlineBereitstellen() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});
 }
 
 function einstiegVerdrahten() {
   $('#datei-neu').addEventListener('click', () => bereich('formular-neu'));
   $('#datei-oeffnen').addEventListener('click', dateiWaehlen);
+  zuletztAnbieten();
   for (const knopf of document.querySelectorAll('[data-zurueck]')) {
     knopf.addEventListener('click', () => bereich('einstieg-start'));
   }
@@ -81,9 +121,11 @@ function einstiegVerdrahten() {
 
   $('#beispiel-oeffnen').addEventListener('click', async () => {
     const { beispielklasse } = await import('../gemeinsam/beispieldaten.js');
+    katalog = katalogAktuell; // die Beispielklasse entsteht mit der heutigen Fassung
+    katalogstand = 'aktuell';
     datei = beispielklasse(katalog);
     tresor = null;
-    griff = null;
+    speicher.schliessen();
     offeneImporte = [];
     stufenkonflikte = [];
     anwendungZeigen();
@@ -121,54 +163,121 @@ async function klasseAnlegen() {
   }
   meldung.hidden = true;
 
-  datei = kd.klasseAnlegen({ klasse, schuljahr, zyklusStart: start, katalogVersion: katalog.version });
+  // Neue Klassen entstehen immer mit der heutigen Fassung
+  katalog = katalogAktuell;
+  katalogstand = 'aktuell';
+  datei = kd.klasseAnlegen({
+    klasse, schuljahr, zyklusStart: start, katalogVersion: katalogAktuell.version,
+  });
   kd.lernendeAusListe(datei, $('#neu-namen').value, katalog.stufen[0].id);
   tresor = await tresorAnlegen(pw);
-  griff = null;
+  speicher.schliessen();
   if (await speichern({ neuerOrt: true })) anwendungZeigen();
 }
 
-async function dateiWaehlen() {
-  if (kannDirektSchreiben) {
-    try {
-      [griff] = await window.showOpenFilePicker({
-        types: [{ description: 'Klassendatei', accept: { 'application/octet-stream': ['.gradu'] } }],
-      });
-    } catch {
-      return; // abgebrochen
+/**
+ * „App merkt sich die Datei" aus KONZEPT Abschnitt 6. Der Ort liegt beim
+ * Speicher; beim Start wird er als eigener Knopf angeboten.
+ *
+ * Die Berechtigung wird **nicht** hier abgefragt, sondern erst im Klick auf den
+ * Knopf: Der Browser beantwortet die Nachfrage außerhalb einer Nutzergeste
+ * ohne Rückfrage mit Nein, und der gemerkte Ort wäre verbrannt.
+ */
+async function zuletztAnbieten() {
+  const gemerkt = await speicher.zuletztBenutzt();
+  if (!gemerkt) return;
+
+  $('#zuletzt-name').textContent = gemerkt.name;
+  $('#zuletzt').hidden = false;
+
+  $('#zuletzt-oeffnen').addEventListener('click', async () => {
+    const uebernommen = await speicher.zuletztUebernehmen();
+    if (!uebernommen) {
+      $('#zuletzt-name').textContent = `${gemerkt.name} – Zugriff verweigert`;
+      return;
     }
-    $('#oeffnen-name').textContent = griff.name;
+    $('#oeffnen-name').textContent = uebernommen.name;
     bereich('formular-oeffnen');
     $('#oeffnen-passwort').focus();
-    return;
-  }
-
-  // Rückfall ohne File System Access API (Safari): klassischer Dateidialog
-  const eingabe = Object.assign(document.createElement('input'), { type: 'file', accept: '.gradu' });
-  eingabe.addEventListener('change', () => {
-    const gewaehlt = eingabe.files?.[0];
-    if (!gewaehlt) return;
-    griff = { name: gewaehlt.name, _datei: gewaehlt };
-    $('#oeffnen-name').textContent = gewaehlt.name;
-    bereich('formular-oeffnen');
   });
-  eingabe.click();
+
+  $('#zuletzt-vergessen').addEventListener('click', async () => {
+    await speicher.zuletztVergessen();
+    $('#zuletzt').hidden = true;
+  });
+}
+
+async function dateiWaehlen() {
+  const gewaehlt = await speicher.waehlenZumOeffnen();
+  if (!gewaehlt) return; // abgebrochen
+  $('#oeffnen-name').textContent = gewaehlt.name;
+  bereich('formular-oeffnen');
+  $('#oeffnen-passwort').focus();
 }
 
 async function dateiOeffnen() {
   const meldung = $('#oeffnen-fehler');
   try {
-    const roh = griff._datei ?? (await griff.getFile());
-    const geoeffnet = await tresorOeffnen(await roh.arrayBuffer(), $('#oeffnen-passwort').value);
+    const geoeffnet = await tresorOeffnen(await speicher.lesen(), $('#oeffnen-passwort').value);
     datei = kd.pruefen(geoeffnet.inhalt);
     tresor = geoeffnet.tresor;
     $('#oeffnen-passwort').value = ''; // ab hier trägt der Tresor den Schlüssel
     meldung.hidden = true;
+    await katalogFuerDateiWaehlen();
     anwendungZeigen();
+    // Noch in der Nutzergeste des Absendens -- nur hier darf der gemerkte
+    // Sicherungsordner nach seiner Berechtigung gefragt werden.
+    await wochensicherungPruefen();
   } catch (fehler) {
     meldung.textContent = fehler.message;
     meldung.hidden = false;
   }
+}
+
+/**
+ * Sucht die Katalogfassung, gegen die diese Klassendatei gilt.
+ *
+ * Das ist der Kern von KONZEPT Abschnitt 7: Ein im Oktober gesetztes Kreuz muss
+ * weiter auf den Text zeigen, der damals danebenstand. Sonst ändert sich
+ * rückwirkend, was ein Kind angekreuzt hat -- und das ist bei einer
+ * Verhaltensbeurteilung kein Schönheitsfehler.
+ */
+async function katalogFuerDateiWaehlen() {
+  const version = datei.katalogVersion;
+
+  if (version === katalogAktuell.version || version == null) {
+    katalog = katalogAktuell;
+    katalogstand = 'aktuell';
+    return;
+  }
+
+  const alt = await katalogFassung('../gemeinsam', version);
+  if (alt) {
+    katalog = alt;
+    katalogstand = 'alt';
+    return;
+  }
+
+  // Nicht archiviert -- dann lieber die heutigen Texte zeigen und es sagen,
+  // als die Klasse gar nicht zu öffnen.
+  katalog = katalogAktuell;
+  katalogstand = 'fehlt';
+}
+
+/** Übernimmt die heutige Fassung für diese Klassendatei -- eine Entscheidung. */
+function katalogUmstellen() {
+  if (!confirm(
+    `Diese Klasse künftig gegen Fassung ${katalogAktuell.version} des Kriterienkatalogs führen?\n\n` +
+      `Ab dann zeigen auch die bisherigen Einschätzungen die heutigen Kriterientexte – ` +
+      `auch dort, wo beim Ankreuzen etwas anderes danebenstand.\n\n` +
+      `Die Kreuze selbst ändern sich nicht.`
+  )) return;
+
+  datei.katalogVersion = katalogAktuell.version;
+  katalog = katalogAktuell;
+  katalogstand = 'aktuell';
+  merken();
+  allesZeichnen();
 }
 
 let schreibvorgang = Promise.resolve();
@@ -202,30 +311,13 @@ async function dateiSchreiben({ neuerOrt = false } = {}) {
   // kann weitergetippt werden -- das darf hinterher nicht als gesichert gelten.
   const standVorher = offeneAenderungen;
   const bytes = await verschluesseln(datei, tresor);
-  const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}.gradu`;
 
-  if (kannDirektSchreiben) {
-    try {
-      if (neuerOrt || !griff?.createWritable) {
-        griff = await window.showSaveFilePicker({
-          suggestedName: name,
-          types: [{ description: 'Klassendatei', accept: { 'application/octet-stream': ['.gradu'] } }],
-        });
-      }
-      const strom = await griff.createWritable();
-      await strom.write(bytes);
-      await strom.close();
-      gesichertFertig(standVorher);
-      return true;
-    } catch (fehler) {
-      if (fehler.name === 'AbortError') {
-        gesichertZeigen(false); // Zähler bleibt stehen, nichts wurde geschrieben
-        return false;
-      }
-    }
+  const weg = await speicher.schreiben(bytes, { name: `${grundname()}.gradu`, neuerOrt });
+  if (weg === 'abgebrochen') {
+    gesichertZeigen(false); // Zähler bleibt stehen, nichts wurde geschrieben
+    return false;
   }
 
-  herunterladen(bytes, name);
   gesichertFertig(standVorher);
   return true;
 }
@@ -242,18 +334,19 @@ let offeneAenderungen = 0;
 /**
  * Schreibt speichern() ohne Rückfrage in die Arbeitsdatei?
  *
- * Nur dann darf automatisch gesichert werden. Ohne beschreibbaren Griff fällt
- * speichern() auf herunterladen() zurück -- bei 0,8 s Taktung entstünde dann
- * pro Änderung eine neue Datei. Ein Klassendurchgang (14 Kinder x 5 Zeilen)
- * hinterließe rund 70 Stück „Klasse-8b-2026-27 (37).gradu" im Downloads-Ordner,
- * und welche davon die aktuelle ist, wüsste niemand mehr. Betrifft Safari
- * immer und Chrome dann, wenn der Speicherort-Dialog abgebrochen wurde.
+ * Nur dann darf automatisch gesichert werden. Kann der Speicher nicht direkt
+ * zurückschreiben, fällt er auf einen Download zurück -- bei 0,8 s Taktung
+ * entstünde dann pro Änderung eine neue Datei. Ein Klassendurchgang
+ * (14 Kinder x 5 Zeilen) hinterließe rund 70 Stück
+ * „Klasse-8b-2026-27 (37).gradu" im Downloads-Ordner, und welche davon die
+ * aktuelle ist, wüsste niemand mehr. Betrifft Safari immer und Chrome dann,
+ * wenn der Speicherort-Dialog abgebrochen wurde.
  *
  * Beispieldaten zählen mit: dort steigt speichern() sofort aus, es entsteht
  * also ohnehin keine Datei.
  */
 function schreibtStillZurueck() {
-  return !!datei?.beispiel || !!griff?.createWritable;
+  return !!datei?.beispiel || speicher.schreibtStillZurueck;
 }
 
 /** Sammelt schnelle Änderungen und speichert gebündelt. */
@@ -310,25 +403,9 @@ function dateiVerdrahten() {
   $('#datei-kopie').addEventListener('click', async () => {
     if (!datei || datei.beispiel) return;
     const bytes = await verschluesseln(datei, tresor);
-    const name = `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}-${heuteKurz()}.gradu`;
-
-    if (kannDirektSchreiben) {
-      try {
-        const ziel = await window.showSaveFilePicker({
-          suggestedName: name,
-          types: [{ description: 'Klassendatei', accept: { 'application/octet-stream': ['.gradu'] } }],
-        });
-        const strom = await ziel.createWritable();
-        await strom.write(bytes);
-        await strom.close();
-        meldungKurz('#datei-kopie', 'Gesichert ✓');
-        return;
-      } catch (fehler) {
-        if (fehler.name === 'AbortError') return;
-      }
-    }
-    herunterladen(bytes, name);
-    meldungKurz('#datei-kopie', 'Datei heruntergeladen ✓');
+    const weg = await speicher.kopieAblegen(bytes, `${grundname()}-${heuteKurz()}.gradu`);
+    if (weg === 'abgebrochen') return;
+    meldungKurz('#datei-kopie', weg === 'datei' ? 'Gesichert ✓' : 'Datei heruntergeladen ✓');
   });
 
   $('#datei-schliessen').addEventListener('click', async () => {
@@ -336,15 +413,300 @@ function dateiVerdrahten() {
     if (!datei.beispiel && !(await speichern())) return;
     location.reload();
   });
+
+  $('#passwort-neu').addEventListener('input', (e) => {
+    const g = passphraseGuete(e.target.value);
+    $('#passwort-guete').textContent = e.target.value ? g.text : '';
+    $('#passwort-guete').dataset.stufe = g.stufe;
+  });
+  $('#formular-passwort').addEventListener('submit', (e) => {
+    e.preventDefault();
+    passwortWechseln();
+  });
+
+  $('#abschluss-starten').addEventListener('click', schuljahrAbschliessen);
+  sicherungVerdrahten();
 }
 
-function herunterladen(bytes, name) {
-  const adresse = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
-  const verweis = Object.assign(document.createElement('a'), { href: adresse, download: name });
-  document.body.append(verweis);
-  verweis.click();
-  verweis.remove();
-  setTimeout(() => URL.revokeObjectURL(adresse), 1000);
+/**
+ * Rohdaten des Schuljahres löschen (KONZEPT 11.3). Die Rückfrage nennt beides:
+ * was verschwindet und was bleibt -- „Löschen" allein sagt nicht, dass die
+ * Stufenhistorie erhalten bleibt, und genau das ist hier der Punkt.
+ */
+async function schuljahrAbschliessen() {
+  if (!datei || datei.beispiel) return;
+
+  const bilanz = kd.abschlussBilanz(datei);
+  const auchTexte = $('#abschluss-texte').checked;
+
+  if (!bilanz.einschaetzungen && !(auchTexte && bilanz.texte)) {
+    alert('Es sind keine Rohdaten mehr da, die gelöscht werden könnten.');
+    return;
+  }
+
+  const weg = [anzahl(bilanz.einschaetzungen, 'Einschätzung', 'Einschätzungen')];
+  if (bilanz.belege) weg.push(anzahl(bilanz.belege, 'Belegsatz', 'Belegsätze') + ' der Kinder');
+  if (auchTexte && bilanz.texte) {
+    weg.push(`die Freitexte aus ${anzahl(bilanz.texte, 'Coaching-Gespräch', 'Coaching-Gesprächen')}`);
+  }
+
+  const bleibt = [`die ${datei.lernende.length} Kinder mit ihrer aktuellen Lernstufe`];
+  if (bilanz.coachings) {
+    bleibt.push(
+      `der Verlauf aus ${anzahl(bilanz.coachings, 'Coaching-Gespräch', 'Coaching-Gesprächen')} ` +
+        `(Datum, Entscheidung, von welcher auf welche Stufe)` +
+        (auchTexte ? '' : ' einschließlich der Freitexte')
+    );
+  }
+
+  const frage =
+    `Rohdaten der Klasse ${datei.klasse} löschen?\n\n` +
+    `Weg sind: ${aufzaehlung(weg)}.\n\n` +
+    `Es bleiben: ${aufzaehlung(bleibt)}.\n\n` +
+    'Das lässt sich nicht rückgängig machen.';
+
+  if (!confirm(frage)) return;
+
+  const ergebnis = kd.rohdatenLoeschen(datei, { texte: auchTexte });
+  zeitraumWahl = null;
+  stufenkonflikte = [];
+  offeneImporte = [];
+  coachingKind = null;
+
+  merken();
+  await speichern();
+  allesZeichnen();
+  alert(
+    `Gelöscht: ${anzahl(ergebnis.einschaetzungen, 'Einschätzung', 'Einschätzungen')}` +
+      (ergebnis.texteGeloescht ? ' und die Freitexte der Gespräche' : '') +
+      '.\nDer Verlauf der Lernstufen ist erhalten.'
+  );
+}
+
+function abschlussZeichnen() {
+  const bilanz = kd.abschlussBilanz(datei);
+  const beispiel = !!datei.beispiel;
+
+  $('#abschluss-form').hidden = beispiel;
+  $('#abschluss-gesperrt').hidden = !beispiel;
+  if (beispiel) {
+    $('#abschluss-bilanz').innerHTML = '';
+    return;
+  }
+
+  $('#abschluss-bilanz').innerHTML = `
+    <p class="meldung ${bilanz.einschaetzungen ? 'warnung' : 'offen'}">
+      <strong>Zum Löschen vorgemerkt:</strong>
+      ${anzahl(bilanz.einschaetzungen, 'Einschätzung', 'Einschätzungen')}${
+        bilanz.belege ? `, davon ${bilanz.belege} mit Belegsatz` : ''}
+      · Freitexte in ${bilanz.texte} von
+      ${anzahl(bilanz.coachings, 'Gespräch', 'Gesprächen')}</p>
+    <p class="meldung gut"><strong>Bleibt erhalten:</strong>
+      ${anzahl(datei.lernende.length, 'Kind', 'Kinder')} mit ihrer Lernstufe · der Verlauf aus
+      ${anzahl(bilanz.coachings, 'Gespräch', 'Gesprächen')}</p>
+    ${datei.abschluss
+      ? `<p class="meldung offen">Zuletzt abgeschlossen am ${datumLang(datei.abschluss.datum)}${
+          datei.abschluss.texteGeloescht ? ' (mit Freitexten)' : ' (ohne Freitexte)'}</p>`
+      : ''}`;
+}
+
+/**
+ * Setzt ein neues Passwort. Technisch heißt das: neues Salz, neuer Schlüssel,
+ * Datei einmal komplett neu geschrieben -- die alten Bytes lassen sich nicht
+ * nachträglich umschlüsseln.
+ *
+ * Das alte Passwort wird **nicht** abgefragt. Es steht nach dem Öffnen nirgends
+ * mehr (der Schlüssel im Tresor ist `extractable: false`), es ließe sich also
+ * nur durch einen zweiten Entschlüsselungsversuch auf die Datei prüfen. Der
+ * Aufwand lohnt nicht: Wer hier steht, hat die Klasse bereits offen -- ein
+ * neues Passwort verschafft ihm keinen Zugang, den er nicht schon hätte.
+ *
+ * Der neue Tresor gilt erst, wenn das Schreiben geklappt hat. Sonst läge in der
+ * Datei noch das alte Passwort, während die Anwendung schon das neue annimmt --
+ * und beim nächsten Öffnen käme „Passwort falsch".
+ */
+async function passwortWechseln() {
+  const neu = $('#passwort-neu').value;
+  const wdh = $('#passwort-wdh').value;
+  const fehler = $('#passwort-fehler');
+  const erfolg = $('#passwort-erfolg');
+  const knopf = $('#formular-passwort button');
+
+  erfolg.hidden = true;
+  const beanstanden = (text, feld) => {
+    fehler.textContent = text;
+    fehler.hidden = false;
+    feld.focus();
+  };
+
+  if (datei.beispiel) {
+    return beanstanden('In der Beispielklasse gibt es keine Datei und damit kein Passwort.', $('#passwort-neu'));
+  }
+  if (neu.length < 8) return beanstanden('Das Passwort braucht mindestens 8 Zeichen.', $('#passwort-neu'));
+  if (neu !== wdh) return beanstanden('Die beiden Eingaben sind nicht gleich.', $('#passwort-wdh'));
+  fehler.hidden = true;
+
+  const alter = tresor;
+  knopf.disabled = true;
+  knopf.textContent = 'ändert …';
+
+  try {
+    // Die anstehende Sammelsicherung darf nicht dazwischenschreiben
+    clearTimeout(sicherungLaeuft);
+    tresor = await tresorAnlegen(neu);
+    if (!(await speichern())) throw new Error('abgebrochen');
+  } catch {
+    tresor = alter; // in der Datei steht weiterhin das alte Passwort
+    beanstanden(
+      'Die Datei wurde nicht geschrieben – es gilt weiterhin das bisherige Passwort.',
+      $('#passwort-neu')
+    );
+    knopf.disabled = false;
+    knopf.textContent = 'Passwort ändern';
+    return;
+  }
+
+  $('#passwort-neu').value = '';
+  $('#passwort-wdh').value = '';
+  $('#passwort-guete').textContent = '';
+  knopf.disabled = false;
+  knopf.textContent = 'Passwort ändern';
+
+  erfolg.textContent = schreibtStillZurueck()
+    ? 'Passwort geändert. Beim nächsten Öffnen der Klassendatei gilt das neue.'
+    : 'Passwort geändert – die neu abgelegte Datei ist damit verschlüsselt. ' +
+      'Speichere sie über die bisherige, sonst gilt weiter das alte Passwort.';
+  erfolg.hidden = false;
+}
+
+// ---------------------------------------------------------------- Wochensicherung
+
+/**
+ * „Wöchentlich eine datierte Kopie neben der Arbeitsdatei, die letzten ~10
+ * behalten" (KONZEPT Abschnitt 6). Sonst hängt ein ganzes Schuljahr an
+ * Backup-Disziplin.
+ *
+ * Warum ein eigener Ordner: Ein Dateigriff kennt sein Verzeichnis nicht, die
+ * Anwendung kann also nicht von sich aus „daneben" schreiben. Der Ordner wird
+ * einmal gewählt und dann gemerkt -- ab da läuft es ohne Zutun.
+ *
+ * Warum das kein zweites Datenschutzproblem ist: Die Kopien sind dieselben
+ * verschlüsselten Bytes wie die Arbeitsdatei. Wo sie liegen, ist deshalb
+ * gleichgültig -- genau das ist die Zusage aus KONZEPT Abschnitt 9.
+ */
+function sicherungFaellig() {
+  if (!datei?.letzteSicherung) return true;
+  const her = (Date.now() - new Date(`${datei.letzteSicherung}T00:00:00`)) / 86_400_000;
+  return her >= SICHERUNG_TAGE;
+}
+
+/**
+ * Läuft nach dem Öffnen einer Klasse -- also aus der Nutzergeste heraus, mit
+ * der das Passwort abgeschickt wurde. Nur dort darf nach der Berechtigung für
+ * den gemerkten Ordner gefragt werden.
+ */
+async function wochensicherungPruefen() {
+  if (!datei || datei.beispiel || !sicherungFaellig()) return;
+  await wochensicherungSchreiben();
+}
+
+/**
+ * Angefasst wird im Ordner ausschließlich, was zum Namensmuster **dieser**
+ * Klasse passt -- Sicherungen anderer Klassen und fremde Dateien bleiben
+ * unberührt. Der Klassenname geht durch `regexSicher()`, weil „8b (Beispiel)"
+ * Klammern enthält.
+ */
+async function wochensicherungSchreiben() {
+  const bytes = await verschluesseln(datei, tresor);
+  const name = await speicher.inOrdnerAblegen(bytes, `${grundname()}_${heuteKurz()}.gradu`, {
+    muster: new RegExp(`^${regexSicher(grundname())}_\\d{4}-\\d{2}-\\d{2}\\.gradu$`),
+    behalten: SICHERUNGEN_BEHALTEN,
+  });
+  if (!name) return null;
+
+  datei.letzteSicherung = heuteKurz();
+  merken();
+  return name;
+}
+
+function grundname() {
+  return `Klasse-${datei.klasse}-${datei.schuljahr.replace('/', '-')}`;
+}
+
+/** Klassennamen wie „8b (Beispiel)" enthalten Zeichen mit Regex-Bedeutung. */
+function regexSicher(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function sicherungVerdrahten() {
+  $('#sicherung-ordner').addEventListener('click', async () => {
+    if (!(await speicher.ordnerWaehlen())) return; // abgebrochen
+    await sicherungZeichnen();
+    meldungKurz('#sicherung-ordner', 'Ordner gemerkt ✓');
+  });
+
+  $('#sicherung-jetzt').addEventListener('click', async () => {
+    const name = await wochensicherungSchreiben();
+    await sicherungZeichnen();
+    meldungKurz('#sicherung-jetzt', name ? `${name} ✓` : 'Kein Zugriff');
+  });
+
+  $('#sicherung-vergessen').addEventListener('click', async () => {
+    await speicher.ordnerVergessen();
+    await sicherungZeichnen();
+  });
+}
+
+async function sicherungZeichnen() {
+  const lage = $('#sicherung-lage');
+  const knoepfe = $('#sicherung-knoepfe');
+  const liste = $('#sicherung-liste');
+  liste.innerHTML = '';
+
+  if (!speicher.kannOrdner) {
+    lage.textContent =
+      'Dieser Browser kann keinen Ordner freigeben – automatische Wochensicherungen gibt es ' +
+      'deshalb nur in Chrome. Nutze so lange „Klassendaten lokal sichern" weiter oben.';
+    knoepfe.hidden = true;
+    return;
+  }
+  if (datei?.beispiel) {
+    lage.textContent = 'In der Beispielklasse gibt es nichts zu sichern.';
+    knoepfe.hidden = true;
+    return;
+  }
+
+  knoepfe.hidden = false;
+  const ordner = await speicher.ordnerName();
+
+  if (!ordner) {
+    lage.textContent =
+      `Noch kein Sicherungsordner gewählt. Ist einer eingerichtet, legt die Anwendung dort beim ` +
+      `Öffnen automatisch alle ${SICHERUNG_TAGE} Tage eine datierte Kopie ab und behält die ` +
+      `letzten ${SICHERUNGEN_BEHALTEN}.`;
+    $('#sicherung-jetzt').hidden = true;
+    $('#sicherung-vergessen').hidden = true;
+    return;
+  }
+
+  $('#sicherung-jetzt').hidden = false;
+  $('#sicherung-vergessen').hidden = false;
+  lage.textContent =
+    `Sicherungsordner: „${ordner.name || 'gewählter Ordner'}“ · ` +
+    (datei?.letzteSicherung
+      ? `zuletzt gesichert am ${datumLang(datei.letzteSicherung)}`
+      : 'noch keine Kopie abgelegt') +
+    `. Es werden die letzten ${SICHERUNGEN_BEHALTEN} behalten.`;
+
+  // Der Speicher liefert nur, wenn der Zugriff ohnehin schon steht -- hier ist
+  // keine Nutzergeste im Spiel, es darf also nicht nachgefragt werden.
+  const namen = await speicher.ordnerInhalt();
+  if (!namen) return;
+  liste.innerHTML = namen
+    .reverse()
+    .slice(0, SICHERUNGEN_BEHALTEN)
+    .map((n) => `<li>${escapen(n)}</li>`)
+    .join('');
 }
 
 function heuteKurz() {
@@ -373,15 +735,21 @@ function dateiAngabenZeichnen() {
     ['Coaching-Gespräche', `${datei.coachings.length}`],
     ['Zuletzt geändert', datei.geaendert ? new Date(datei.geaendert).toLocaleString('de-DE') : '–'],
     ['Ablage', datei.beispiel ? 'Beispieldaten – nur im Arbeitsspeicher'
-      : griff?.name ?? 'wird beim Sichern abgefragt'],
+      : speicher.name ?? 'wird beim Sichern abgefragt'],
   ];
 
   $('#datei-angaben').innerHTML = angaben
     .map(([k, w]) => `<div><dt>${k}</dt><dd>${escapen(String(w))}</dd></div>`)
     .join('');
 
-  // Im Beispielmodus wäre Sichern irreführend
+  // Im Beispielmodus wäre Sichern irreführend -- und ein Passwort gibt es dort
+  // gar nicht, weil keine Datei entsteht
   $('#datei-kopie').disabled = !!datei.beispiel;
+  $('#formular-passwort').hidden = !!datei.beispiel;
+  $('#passwort-hinweis').hidden = !!datei.beispiel;
+  $('#passwort-gesperrt').hidden = !datei.beispiel;
+
+  katalogstandZeichnen();
 
   $('#datei-modus').textContent = schreibtStillZurueck()
     ? 'Änderungen werden automatisch gesichert, solange diese Klasse geöffnet ist. ' +
@@ -394,6 +762,29 @@ function dateiAngabenZeichnen() {
 }
 
 // ---------------------------------------------------------------- Anwendung
+
+function katalogstandZeichnen() {
+  const feld = $('#katalog-warnung');
+  feld.hidden = katalogstand === 'aktuell';
+  if (feld.hidden) return;
+
+  const meine = escapen(String(datei.katalogVersion ?? '?'));
+  const heute = escapen(String(katalogAktuell.version));
+
+  feld.innerHTML =
+    katalogstand === 'alt'
+      ? `<strong>Diese Klasse läuft auf Fassung ${meine} des Kriterienkatalogs</strong>, ` +
+        `ausgeliefert wird inzwischen Fassung ${heute}. Angezeigt werden die Texte aus ` +
+        `Fassung ${meine} – so, wie sie beim Ankreuzen danebenstanden. ` +
+        `<button type="button" class="knopf-klein" id="katalog-umstellen">` +
+        `Auf Fassung ${heute} umstellen</button>`
+      : `<strong>Fassung ${meine} des Kriterienkatalogs ist nicht archiviert.</strong> ` +
+        `Diese Klassendatei verweist darauf, gefunden wurde sie nicht – angezeigt werden ` +
+        `deshalb die Texte der heutigen Fassung ${heute}. Wer die alte Fassung noch hat, ` +
+        `legt sie als <code>gemeinsam/kataloge/katalog-${meine}.json</code> ab.`;
+
+  $('#katalog-umstellen')?.addEventListener('click', katalogUmstellen);
+}
 
 /** Der gerade betrachtete Zeitraum -- gewählt oder aus dem Datum. */
 function aktuellerZeitraum() {
@@ -453,6 +844,8 @@ function allesZeichnen() {
   klassenlisteZeichnen();
   fremdZeichnen();
   dateiAngabenZeichnen();
+  abschlussZeichnen();
+  sicherungZeichnen();
 }
 
 function klassenlisteZeichnen() {
@@ -530,10 +923,239 @@ function kindZeigen(schuelerId) {
   $('#kind-coaching-starten').textContent = 'Coaching-Gespräch führen';
   $('#kind-coaching-starten').onclick = () => coachingZeigen(kind.id);
 
+  $('#kind-auskunft').onclick = () => auskunftZeigen(kind.id);
+  $('#kind-umbenennen').onclick = () => kindUmbenennen(kind.id);
+  $('#kind-entfernen').onclick = () => kindEntfernen(kind.id);
+
   bandZeichnen(kind);
   zeitraumtabelleZeichnen(kind);
   coachingsZeichnen(kind);
   window.scrollTo({ top: 0 });
+}
+
+// ---------------------------------------------------------------- Auskunft (Art. 15 DSGVO)
+
+/**
+ * Alles, was über ein Kind gespeichert ist, auf einem Blatt -- zum Ausdrucken
+ * und Aushändigen.
+ *
+ * Bewusst **kein Dateidownload**: Eine Textdatei mit Verhaltensdaten läge
+ * unverschlüsselt im Downloads-Ordner und würde auf einem Mac mit
+ * synchronisiertem Schreibtisch unbemerkt in die iCloud wandern -- genau die
+ * Falle aus KONZEPT Abschnitt 9. Für Ausdrucke macht das Konzept die Ausnahme
+ * („die gehören gedruckt und nicht abgelegt"), für Dateien nicht.
+ */
+function auskunftZeigen(schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  if (!kind) return;
+
+  for (const a of document.querySelectorAll('.ansicht')) a.hidden = a.id !== 'ansicht-auskunft';
+  for (const k of document.querySelectorAll('.navigation button')) k.classList.remove('aktiv');
+  $('#kopf-titel').textContent = 'Auskunft';
+  $('#auskunft-zurueck').onclick = () => kindZeigen(schuelerId);
+
+  $('#auskunft-blatt').innerHTML = auskunftBauen(kind);
+  window.scrollTo({ top: 0 });
+}
+
+function auskunftBauen(kind) {
+  const eigene = (quelle) =>
+    datei.einschaetzungen
+      .filter((e) => e.schuelerId === kind.id && e.quelle === quelle)
+      .sort((a, b) => a.zeitraum - b.zeitraum);
+
+  const selbst = eigene('selbst');
+  const fremd = eigene('fremd');
+  const gespraeche = kd.coachingsVon(datei, kind.id).slice().reverse();
+
+  return `
+    <div class="auskunft">
+      <h1>Auskunft über gespeicherte Daten</h1>
+      <p class="auskunft-unter">nach Artikel 15 der Datenschutz-Grundverordnung ·
+        Graduierungssystem der Mittelschule Rednitzhembach</p>
+
+      <dl class="auskunft-kopf">
+        <div><dt>Person</dt><dd>${escapen(kind.name)}</dd></div>
+        <div><dt>Klasse</dt><dd>${escapen(datei.klasse)}, Schuljahr ${escapen(datei.schuljahr)}</dd></div>
+        <div><dt>Aktuelle Lernstufe</dt>
+          <dd>${stufe(katalog, kind.stufe).name} (seit ${datumLang(kind.seit)})</dd></div>
+        <div><dt>Auskunft erstellt am</dt><dd>${datumLang(heuteKurz())}</dd></div>
+      </dl>
+
+      <h2>1 · Verlauf der Lernstufen</h2>
+      ${auskunftVerlauf(kind)}
+
+      <h2>2 · Selbsteinschätzungen des Kindes (${selbst.length})</h2>
+      ${auskunftEinschaetzungen(selbst, kind, true)}
+
+      <h2>3 · Einschätzungen der Klassenlehrkraft (${fremd.length})</h2>
+      ${auskunftEinschaetzungen(fremd, kind, false)}
+
+      <h2>4 · Coaching-Gespräche (${gespraeche.length})</h2>
+      ${auskunftGespraeche(gespraeche)}
+
+      <h2>5 · Herkunft, Zweck und Aufbewahrung</h2>
+      <ul class="auskunft-erlaeuterung">
+        <li><strong>Woher die Daten stammen:</strong> Die Selbsteinschätzungen hat das Kind
+          selbst auf seinem Gerät ausgefüllt und abgeschickt. Die Einschätzungen der Lehrkraft
+          und die Gesprächsnotizen stammen von der Klassenlehrkraft.</li>
+        <li><strong>Wozu sie verarbeitet werden:</strong> ausschließlich zur Vorbereitung und
+          Dokumentation der Coaching-Gespräche im Graduierungssystem.</li>
+        <li><strong>Wer sie sieht:</strong> die Klassenlehrkraft. Es gibt keine Übermittlung an
+          Dritte, keinen Server und keine Cloud.</li>
+        <li><strong>Wo sie liegen:</strong> in einer verschlüsselten Datei auf dem Gerät der
+          Klassenlehrkraft.</li>
+        <li><strong>Wie lange:</strong> Die Einschätzungen werden zum Schuljahresende gelöscht;
+          erhalten bleibt der Verlauf der Lernstufen.</li>
+        <li><strong>Rechte:</strong> Berichtigung, Löschung, Einschränkung der Verarbeitung und
+          Beschwerde bei der Aufsichtsbehörde – zu richten an die Schule.</li>
+      </ul>
+      ${datei.abschluss
+        ? `<p class="auskunft-fussnote">Hinweis: Am ${datumLang(datei.abschluss.datum)} wurden die
+             Rohdaten dieses Schuljahres gelöscht${datei.abschluss.texteGeloescht
+               ? ', einschließlich der Freitexte aus den Gesprächen' : ''}.
+             Diese Auskunft zeigt, was danach noch vorhanden ist.</p>`
+        : ''}
+    </div>`;
+}
+
+function auskunftVerlauf(kind) {
+  const verlauf = kd.stufenverlauf(datei, kind.id);
+  const wort = { hoch: 'Hochstufung', gleich: 'Stufe gehalten', runter: 'Rückstufung', Start: 'zu Beginn' };
+
+  return `<table class="auskunft-tabelle">
+    <thead><tr><th>Ab</th><th>Lernstufe</th><th>Anlass</th></tr></thead>
+    <tbody>${verlauf
+      .map(
+        (s) => `<tr>
+          <td>${s.ab ? datumLang(s.ab) : 'Schuljahresbeginn'}</td>
+          <td>${stufe(katalog, s.stufe).name}</td>
+          <td>${wort[s.anlass] ?? escapen(s.anlass)}</td>
+        </tr>`
+      )
+      .join('')}</tbody>
+  </table>`;
+}
+
+function auskunftEinschaetzungen(liste, kind, mitBeleg) {
+  if (!liste.length) return '<p class="auskunft-leer">Keine gespeichert.</p>';
+  const wort = Object.fromEntries(katalog.skala.map((s) => [s.id, s.text]));
+
+  return liste
+    .map((e) => {
+      // Gegen die damals gültige Stufe auflösen, nicht gegen die heutige
+      const damals = e.stufe ?? kind.stufe;
+      const zeilen = mitBeleg
+        ? kriterienDerStufe(katalog, damals).map((k) => [k.id, k.text])
+        : bewertungszeilen(katalog, damals).map((z) => [z.id, z.text]);
+
+      const eintraege = zeilen
+        .filter(([id]) => e.bewertungen?.[id])
+        .map(([id, text]) => `<li>${escapen(text)} – <b>${wort[e.bewertungen[id]]}</b></li>`)
+        .join('');
+
+      const belegKriterium = katalog.kriterien.find((k) => k.id === e.beleg?.kriteriumId);
+
+      return `<div class="auskunft-block">
+        <p class="auskunft-block-kopf">Zeitraum ${e.zeitraum} ·
+          ${stufe(katalog, damals).name}${e.erstellt ? ` · erfasst am ${datumLang(e.erstellt.slice(0, 10))}` : ''}</p>
+        <ul class="auskunft-werte">${eintraege || '<li>Keine Angaben.</li>'}</ul>
+        ${mitBeleg && e.beleg?.text
+          ? `<p class="auskunft-beleg"><em>Eigener Satz des Kindes${
+              belegKriterium ? ` zu „${escapen(belegKriterium.text)}“` : ''}:</em><br>
+             „${escapen(e.beleg.text)}“</p>`
+          : ''}
+      </div>`;
+    })
+    .join('');
+}
+
+function auskunftGespraeche(gespraeche) {
+  if (!gespraeche.length) return '<p class="auskunft-leer">Keins geführt.</p>';
+  const wort = { hoch: 'Hochstufung', gleich: 'Stufe gehalten', runter: 'Rückstufung' };
+
+  return gespraeche
+    .map((c) => {
+      const gruende = c.gruende?.length
+        ? `<p><em>Angekreuzte Gründe:</em></p><ul class="auskunft-werte">${c.gruende
+            .map((id) => `<li>${escapen(katalog.kriterien.find((k) => k.id === id)?.rueckstufung ?? id)}</li>`)
+            .join('')}</ul>`
+        : '';
+
+      return `<div class="auskunft-block">
+        <p class="auskunft-block-kopf">${datumLang(c.datum)} · ${wort[c.entscheidung]} ·
+          ${stufe(katalog, c.vonStufe).name}${c.vonStufe !== c.nachStufe
+            ? ` → ${stufe(katalog, c.nachStufe).name}` : ''}
+          (gilt ab ${datumLang(c.gueltigAb)})</p>
+        ${c.begruendung ? `<p><em>Begründung:</em> ${escapen(c.begruendung)}</p>` : ''}
+        ${gruende}
+        ${c.vereinbarungen ? `<p><em>Vereinbarung:</em> ${escapen(c.vereinbarungen)}</p>` : ''}
+        <p class="auskunft-klein">Ausweis übergeben: ${c.ausweisUebergeben ? 'ja' : 'nein'}</p>
+      </div>`;
+    })
+    .join('');
+}
+
+function kindUmbenennen(schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  const neu = prompt('Neuer Name:', kind.name)?.trim();
+  if (!neu || neu === kind.name) return;
+
+  try {
+    kd.lernendeUmbenennen(datei, schuelerId, neu);
+  } catch (fehler) {
+    alert(fehler.message);
+    return;
+  }
+
+  merken();
+  allesZeichnen();
+  kindZeigen(schuelerId);
+}
+
+/**
+ * Entfernen löscht den ganzen Verlauf mit -- deshalb steht in der Rückfrage,
+ * wie viel das ist. „3 Einschätzungen und 1 Gespräch" ist eine andere
+ * Entscheidung als „nichts davon", und beides sieht auf dem Knopf gleich aus.
+ */
+function kindEntfernen(schuelerId) {
+  const kind = datei.lernende.find((l) => l.id === schuelerId);
+  const einschaetzungen = datei.einschaetzungen.filter((e) => e.schuelerId === schuelerId).length;
+  const coachings = datei.coachings.filter((c) => c.schuelerId === schuelerId).length;
+
+  const haengtDran = [
+    einschaetzungen ? anzahl(einschaetzungen, 'Einschätzung', 'Einschätzungen') : null,
+    coachings ? anzahl(coachings, 'Coaching-Gespräch', 'Coaching-Gespräche') : null,
+  ].filter(Boolean);
+
+  const frage =
+    `„${kind.name}“ aus der Klassenliste entfernen?\n\n` +
+    (haengtDran.length
+      ? `Dabei werden auch ${aufzaehlung(haengtDran)} gelöscht.\n\n`
+      : 'Es sind noch keine Einschätzungen erfasst.\n\n') +
+    'Das lässt sich nicht rückgängig machen.';
+
+  if (!confirm(frage)) return;
+
+  const bilanz = kd.lernendeEntfernen(datei, schuelerId);
+  // Ein offener Stufenkonflikt zu diesem Kind wäre jetzt ins Leere gerichtet
+  stufenkonflikte = stufenkonflikte.filter((k) => k.schuelerId !== schuelerId);
+  if (coachingKind?.id === schuelerId) coachingKind = null;
+
+  merken();
+  allesZeichnen();
+  document.querySelector('.navigation button[data-ansicht="uebersicht"]').click();
+  alert(`„${bilanz.name}“ wurde entfernt.`);
+}
+
+function aufzaehlung(teile) {
+  if (teile.length === 1) return teile[0];
+  return `${teile.slice(0, -1).join(', ')} und ${teile.at(-1)}`;
+}
+
+/** „1 Einschätzung" statt „1 Einschätzungen". */
+function anzahl(wieviele, ein, mehrere) {
+  return `${wieviele} ${wieviele === 1 ? ein : mehrere}`;
 }
 
 function bandZeichnen(kind) {
@@ -705,6 +1327,7 @@ function coachingZeigen(schuelerId) {
   $('#coaching-unter').textContent =
     `Aktuell ${s.name} · Zeiträume ${bloecke[0]} bis ${bloecke.at(-1)}`;
 
+  $('#stufencode').hidden = true;
   $('#formular-coaching').hidden = false;
   for (const ueber of document.querySelectorAll('#ansicht-coaching h2')) ueber.hidden = false;
 
@@ -899,7 +1522,58 @@ function coachingSpeichern() {
 
   merken();
   allesZeichnen();
-  kindZeigen(coachingKind.id);
+  const kind = coachingKind;
+  kindZeigen(kind.id);
+  stufencodeZeigen(kind);
+}
+
+// ---------------------------------------------------------------- Rückweg aufs Kindergerät
+
+/**
+ * Der QR-Rückweg aus KONZEPT Abschnitt 5. Nach dem Gespräch zeigt die Lehrkraft
+ * einen Code, das Kind scannt ihn und hat die neue Stufe auf dem eigenen Gerät.
+ *
+ * Warum überhaupt: Bis das Kind seine Stufe umstellt, füllt es den falschen
+ * Kriteriensatz aus. Der Import erkennt das seit v24 und lässt es entscheiden --
+ * aber erst hier verschwindet die Ursache.
+ *
+ * Warum kein Kamerazugriff nötig ist: Der Code enthält schlicht die Adresse der
+ * Schüleranwendung mit den Angaben im Fragment. Die iPad-Kamera erkennt ihn von
+ * sich aus und öffnet die Seite -- die App muss nichts dekodieren.
+ *
+ * Warum ein Fragment und kein `?`-Parameter: Fragmente werden nie an den Server
+ * gesendet. Dieselbe Überlegung wie beim Klassen-Link (`…/schueler/#8a`).
+ */
+function stufencodeZeigen(kind) {
+  const kasten = $('#stufencode');
+  const s = stufe(katalog, kind.stufe);
+
+  const angaben = new URLSearchParams({ s: kind.stufe });
+  const letzte = kd.coachingsVon(datei, kind.id)[0];
+  if (letzte?.vereinbarungen) angaben.set('v', letzte.vereinbarungen);
+
+  const adresse = new URL('../schueler/', location.href);
+  adresse.hash = angaben.toString();
+
+  $('#stufencode-titel').textContent = `${kind.name} · ${s.name}`;
+  $('#stufencode-text').textContent =
+    'Das Kind scannt den Code mit der Kamera seines iPads – dann steht die neue Stufe ' +
+    'auf seinem Gerät, ohne dass es sie von Hand umstellen muss.';
+
+  try {
+    $('#stufencode-bild').innerHTML = qrAlsSvg(adresse.href, { kachel: 6 });
+    $('#stufencode-adresse').textContent = adresse.href;
+  } catch (fehler) {
+    // Zu lange Vereinbarung: lieber ohne sie einen lesbaren Code als gar keinen
+    const knapp = new URL('../schueler/', location.href);
+    knapp.hash = new URLSearchParams({ s: kind.stufe }).toString();
+    $('#stufencode-bild').innerHTML = qrAlsSvg(knapp.href, { kachel: 6 });
+    $('#stufencode-adresse').textContent =
+      `${knapp.href} — ohne die Vereinbarung: ${fehler.message}`;
+  }
+
+  kasten.hidden = false;
+  kasten.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 /** Coaching-Bereich ohne gewähltes Kind: nur die Auswahl. */
@@ -1422,6 +2096,14 @@ function navigationVerdrahten() {
       $('#kopf-titel').textContent = knopf.textContent;
       if (knopf.dataset.ansicht === 'import') importErgebnisZeichnen([]);
       if (knopf.dataset.ansicht === 'coaching') coachingBereitZeigen();
+      // Beim Erfassen wird bewusst nur nachgezählt, nicht alles neu gezeichnet
+      // (sonst springt der Fokus). Der Datei-Bereich stünde dadurch auf einem
+      // alten Stand -- und dort hängt ein Löschknopf an genau diesen Zahlen.
+      if (knopf.dataset.ansicht === 'datei') {
+        dateiAngabenZeichnen();
+        abschlussZeichnen();
+        sicherungZeichnen();
+      }
       window.scrollTo({ top: 0 });
     });
   }

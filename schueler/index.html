@@ -51,6 +51,26 @@
   </div>
 </div>
 
+<!-- Neue Stufe vom QR-Code der Lehrkraft. Wird nie still übernommen: Das Kind
+     sieht, was sich ändert, und sagt Ja. -->
+<div id="neue-stufe" class="einrichtung" hidden>
+  <div class="einrichtung-karte">
+    <h1>Du hast eine neue Lernstufe</h1>
+    <p class="lang" id="neue-stufe-text">–</p>
+    <div class="neue-stufe-karte" id="neue-stufe-karte">
+      <img class="neue-stufe-symbol" id="neue-stufe-symbol" src="" alt="" width="160" height="160">
+      <p class="neue-stufe-name" id="neue-stufe-name">–</p>
+      <p class="neue-stufe-motto" id="neue-stufe-motto">–</p>
+    </div>
+    <div class="neue-stufe-vereinbarung" id="neue-stufe-vereinbarung" hidden>
+      <p class="neue-stufe-kopf">Das habt ihr vereinbart</p>
+      <p id="neue-stufe-vereinbarung-text">–</p>
+    </div>
+    <button type="button" id="neue-stufe-ja" class="knopf-gross">Übernehmen</button>
+    <button type="button" id="neue-stufe-nein" class="knopf-leise">Nicht jetzt</button>
+  </div>
+</div>
+
 <!-- Hauptanwendung ---------------------------------------------------------->
 <div id="anwendung" hidden>
 
@@ -84,6 +104,12 @@
           </p>
           <p class="ausweis-motto" id="ausweis-motto"></p>
         </div>
+      </div>
+
+      <!-- Aus dem Coaching-Gespräch, über den QR-Code hierhergekommen -->
+      <div class="vereinbarung" id="ausweis-vereinbarung" hidden>
+        <p class="vereinbarung-kopf">Das haben wir vereinbart</p>
+        <p id="ausweis-vereinbarung-text">–</p>
       </div>
 
       <h2>Das darf ich</h2>

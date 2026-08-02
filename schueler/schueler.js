@@ -70,11 +70,78 @@ async function starten() {
 
   offlineBereitstellen();
 
+  // Erst der QR-Rückweg: Wer gerade den Code der Lehrkraft gescannt hat, soll
+  // nicht zuerst seinen alten Ausweis sehen.
+  if (neueStufeAusAdresse()) return;
+
   if (profil) {
     anwendungZeigen();
   } else {
     einrichtungOeffnen();
   }
+}
+
+// ---------------------------------------------------------------- Neue Stufe per QR
+
+const SCHLUESSEL_VEREINBARUNG = 'graduierung.schueler.vereinbarung';
+
+/**
+ * Nach dem Coaching zeigt die Lehrkraft einen QR-Code (KONZEPT Abschnitt 5).
+ * Die iPad-Kamera öffnet daraus diese Seite mit `#s=<stufe>&v=<vereinbarung>`.
+ *
+ * Übernommen wird **nie still**: Das Kind sieht, was sich ändert, und sagt Ja.
+ * Ein Code, der von selbst am Profil dreht, wäre auch der bequemste Weg für
+ * einen Scherz auf dem Pausenhof.
+ *
+ * Gibt zurück, ob eine Abfrage angezeigt wird.
+ */
+function neueStufeAusAdresse() {
+  const angaben = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const stufenId = angaben.get('s');
+  if (!stufenId || !katalog.stufen.some((s) => s.id === stufenId)) return false;
+
+  const neue = stufe(katalog, stufenId);
+  const vereinbarung = angaben.get('v')?.trim() ?? '';
+
+  // Ohne Profil zuerst einrichten -- sonst wüssten wir nicht, wessen Stufe das ist
+  if (!profil) {
+    einrichtungOeffnen();
+    const treffer = $('#einrichtung').querySelector(`input[name="stufe"][value="${stufenId}"]`);
+    if (treffer) treffer.checked = true;
+    return true;
+  }
+
+  $('#neue-stufe-text').textContent =
+    profil.stufe === stufenId
+      ? `${profil.name}, deine Stufe bleibt bestehen.`
+      : `${profil.name}, du warst ${praeposition(profil.stufe)} – ab jetzt gilt:`;
+  $('#neue-stufe-name').textContent = `Ich lerne ${praeposition(stufenId)}`;
+  $('#neue-stufe-motto').textContent = neue.motto;
+  $('#neue-stufe-symbol').src = `../symbole/stufen/${stufenId}.png`;
+  $('#neue-stufe-karte').style.setProperty('--stufe', neue.farbe);
+
+  $('#neue-stufe-vereinbarung').hidden = !vereinbarung;
+  $('#neue-stufe-vereinbarung-text').textContent = vereinbarung;
+
+  $('#neue-stufe-ja').onclick = () => {
+    profilSchreiben({ ...profil, stufe: stufenId });
+    if (vereinbarung) localStorage.setItem(SCHLUESSEL_VEREINBARUNG, vereinbarung);
+    else localStorage.removeItem(SCHLUESSEL_VEREINBARUNG);
+    abschliessenUndZeigen();
+  };
+  $('#neue-stufe-nein').onclick = abschliessenUndZeigen;
+
+  $('#neue-stufe').hidden = false;
+  $('#anwendung').hidden = true;
+  return true;
+}
+
+function abschliessenUndZeigen() {
+  // Fragment leeren, damit ein Neuladen nicht wieder dieselbe Frage stellt
+  history.replaceState(null, '', location.pathname + location.search);
+  $('#neue-stufe').hidden = true;
+  anwendungZeigen();
+  ansichtZeigen('ausweis');
 }
 
 /**
@@ -277,6 +344,10 @@ function ausweisZeichnen() {
     )
     .join('');
 
+  const vereinbarung = localStorage.getItem(SCHLUESSEL_VEREINBARUNG);
+  $('#ausweis-vereinbarung').hidden = !vereinbarung;
+  $('#ausweis-vereinbarung-text').textContent = vereinbarung ?? '';
+
   $('#stufe-aendern').onclick = einrichtungOeffnen;
   $('#profil-zuruecksetzen').onclick = allesLoeschen;
 }
@@ -291,6 +362,7 @@ function allesLoeschen() {
   if (!sicher) return;
   localStorage.removeItem(SCHLUESSEL_PROFIL);
   localStorage.removeItem(SCHLUESSEL_VERLAUF);
+  localStorage.removeItem(SCHLUESSEL_VEREINBARUNG);
   profil = null;
   einrichtungOeffnen();
   $('#eingabe-name').value = '';

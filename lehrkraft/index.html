@@ -24,6 +24,15 @@
       Sie werden nirgendwohin übertragen.</p>
 
     <div id="einstieg-start">
+      <!-- Zuletzt geöffnete Datei, gemerkt über IndexedDB. Erscheint nur, wenn
+           es einen Griff gibt -- also nicht beim allerersten Start und nicht
+           in Browsern ohne File System Access API. -->
+      <div class="zuletzt" id="zuletzt" hidden>
+        <p class="zuletzt-kopf">Zuletzt geöffnet</p>
+        <button type="button" class="knopf-gross" id="zuletzt-oeffnen">
+          <span id="zuletzt-name">–</span></button>
+        <button type="button" class="knopf-winzig" id="zuletzt-vergessen">nicht mehr merken</button>
+      </div>
       <button type="button" class="knopf-gross" id="datei-oeffnen">Klassendatei öffnen</button>
       <button type="button" class="knopf-leise" id="datei-neu">Neue Klasse anlegen</button>
       <button type="button" class="knopf-leise" id="beispiel-oeffnen">
@@ -45,8 +54,15 @@
       <label class="feld"><span>Passwort für die Datei</span>
         <input type="password" id="neu-passwort" autocomplete="new-password">
         <span class="zaehler" id="neu-guete"></span></label>
-      <p class="hinweis">Ohne dieses Passwort kommst du nicht mehr an die Daten –
-        es gibt keine Wiederherstellung. Schreib es dir auf.</p>
+      <!-- Stand vorher als leiser `.hinweis` unter dem Feld. Was hier schiefgeht,
+           ist aber nicht klein: Die Datei ist AES-verschlüsselt, ohne Passwort
+           gibt es keinen Weg zurück -- auch nicht für mich. -->
+      <p class="warnfeld">
+        <strong>Dieses Passwort ist der einzige Schlüssel.</strong>
+        Die Klassendatei ist verschlüsselt; ohne das Passwort sind die Daten
+        eines ganzen Schuljahres weg. Es gibt keine Wiederherstellung, keine
+        Hintertür und keine Rückfrage. <strong>Schreib es dir jetzt auf</strong> –
+        an einer Stelle, die du in acht Wochen noch findest.</p>
       <p class="fehler" id="neu-fehler" role="alert" hidden></p>
       <button type="submit" class="knopf-gross">Anlegen und speichern</button>
       <button type="button" class="knopf-leise" data-zurueck>Zurück</button>
@@ -150,6 +166,15 @@
       <button type="button" class="knopf-gross schmal" id="kind-coaching-starten" hidden>
         Coaching-Gespräch führen</button>
 
+      <!-- Bewusst hier und nicht in der Übersicht: Umbenennen und Entfernen
+           passieren selten, und Entfernen löscht den ganzen Verlauf mit. Wer
+           hier steht, hat diesen Verlauf gerade vor sich. -->
+      <div class="werkzeuge werkzeuge-kind">
+        <button type="button" class="knopf-klein" id="kind-auskunft">Auskunft nach Art. 15 DSGVO</button>
+        <button type="button" class="knopf-klein" id="kind-umbenennen">Umbenennen</button>
+        <button type="button" class="knopf-klein leise" id="kind-entfernen">Aus der Klasse entfernen</button>
+      </div>
+
       <h2>Stufenverlauf</h2>
       <div id="kind-band"></div>
 
@@ -208,6 +233,14 @@
         </div>
 
         <p class="fehler" id="coaching-fehler" role="alert" hidden></p>
+        <!-- Nach dem Festhalten: der Rückweg aufs Kindergerät (KONZEPT 5) -->
+        <div class="stufencode" id="stufencode" hidden>
+          <h3 id="stufencode-titel">–</h3>
+          <p class="lang" id="stufencode-text">–</p>
+          <div id="stufencode-bild"></div>
+          <p class="hinweis" id="stufencode-adresse"></p>
+          <button type="button" class="knopf-leise" id="stufencode-zu">Schließen</button>
+        </div>
         <div class="zwei-spalten">
           <button type="submit" class="knopf-gross">Gespräch festhalten</button>
           <button type="button" class="knopf-leise" id="coaching-drucken">Bogen drucken</button>
@@ -231,6 +264,7 @@
 
     <!-- Datei -->
     <section class="ansicht" id="ansicht-datei" hidden>
+      <p class="warnfeld" id="katalog-warnung" hidden></p>
       <p class="lang" id="datei-modus">Änderungen werden automatisch gesichert, solange diese
         Klasse geöffnet ist. Lege am Ende der Bearbeitung trotzdem eine eigene Sicherung ab –
         dann liegen die Klassendaten unabhängig von Browser und Gerät bei dir.</p>
@@ -240,8 +274,65 @@
         <button type="button" class="knopf-leise" id="datei-schliessen">Klasse schließen</button>
       </div>
 
+      <h2>Wöchentliche Sicherung</h2>
+      <p class="lang" id="sicherung-lage">–</p>
+      <div class="knopfreihe" id="sicherung-knoepfe">
+        <button type="button" class="knopf-gross" id="sicherung-ordner">Sicherungsordner wählen</button>
+        <button type="button" class="knopf-leise" id="sicherung-jetzt">Jetzt sichern</button>
+        <button type="button" class="knopf-leise" id="sicherung-vergessen">Ordner vergessen</button>
+      </div>
+      <ul class="sicherung-liste" id="sicherung-liste"></ul>
+
+      <h2>Passwort ändern</h2>
+      <p class="lang" id="passwort-hinweis">Das neue Passwort gilt ab dem nächsten
+        Speichervorgang. Ältere Sicherungskopien behalten ihr altes Passwort – sie sind
+        mit dem Schlüssel verschlüsselt, der beim Anlegen galt.</p>
+      <form id="formular-passwort">
+        <div class="zwei-spalten">
+          <label class="feld"><span>Neues Passwort</span>
+            <input type="password" id="passwort-neu" autocomplete="new-password">
+            <span class="zaehler" id="passwort-guete"></span></label>
+          <label class="feld"><span>Noch einmal</span>
+            <input type="password" id="passwort-wdh" autocomplete="new-password"></label>
+        </div>
+        <p class="warnfeld">Auch das neue Passwort lässt sich nicht wiederherstellen.
+          Notiere es, bevor du es änderst.</p>
+        <p class="fehler" id="passwort-fehler" role="alert" hidden></p>
+        <p class="meldung gut" id="passwort-erfolg" role="status" hidden></p>
+        <button type="submit" class="knopf-gross">Passwort ändern</button>
+      </form>
+      <p class="hinweis" id="passwort-gesperrt" hidden>In der Beispielklasse gibt es
+        keine Datei und damit auch kein Passwort.</p>
+
+      <h2>Schuljahr abschließen</h2>
+      <p class="lang">Löschen ist hier eine Funktion, kein Versäumnis. Am Ende des Schuljahres
+        gehen die Rohdaten weg – die Lernstufen und ihr Verlauf bleiben. Ein Kind soll sich
+        entwickeln können, ohne dass ein digitales Register jahrelang mitläuft.</p>
+      <div id="abschluss-bilanz"></div>
+      <div id="abschluss-form">
+        <label class="feld haken-feld">
+          <input type="checkbox" id="abschluss-texte">
+          <span>Auch die Freitexte der Coaching-Gespräche löschen – Begründungen,
+            Vereinbarungen und Rückstufungsgründe.
+            <em>Ob das darf, hängt an der Aufbewahrungsfrist für Rückstufungsdokumente.
+            Die Frage steht im Konzept noch offen.</em></span></label>
+        <p class="warnfeld">Das lässt sich nicht rückgängig machen. Lege vorher eine
+          Sicherungskopie ab, wenn du die Daten noch brauchen könntest – die Kopie behält
+          alles, was hier verschwindet.</p>
+        <button type="button" class="knopf-gross" id="abschluss-starten">Rohdaten löschen</button>
+      </div>
+      <p class="hinweis" id="abschluss-gesperrt" hidden>In der Beispielklasse gibt es nichts
+        zu löschen – die Daten stehen nur im Arbeitsspeicher.</p>
+
       <h2>Diese Klasse</h2>
       <dl class="angaben" id="datei-angaben"></dl>
+    </section>
+
+    <!-- Auskunft nach Art. 15 DSGVO -->
+    <section class="ansicht" id="ansicht-auskunft" hidden>
+      <button type="button" class="knopf-klein" id="auskunft-zurueck">← Zurück zum Verlauf</button>
+      <div id="auskunft-blatt"></div>
+      <button type="button" class="knopf-gross schmal" id="auskunft-drucken">Auskunft drucken</button>
     </section>
 
     <!-- Anleitung -->
