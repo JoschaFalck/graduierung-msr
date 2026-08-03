@@ -113,17 +113,18 @@ h2 {
 
 /* Abschlussband unten. Die negativen Ränder wie beim Kopf, nur andersherum;
    die Rundung unten kommt vom `overflow: hidden` der Karte.
-   `center 40%` statt `center`: Bei 4:1 fällt oben und unten je ein Viertel
-   weg, und mittig geschnitten wäre der Kompass angeschnitten. So bleibt er
-   ganz, dafür fehlt unten ein Stück Bleistift. */
+   6:1 mit `center 30%` ist gerechnet: Auf der 832 px breiten Karte bleiben
+   davon die Bildzeilen 120 bis 320 von 600 übrig -- Kompass, Tasse und Karte
+   sind ganz drin, Lineal und Bleistift fallen unten heraus. Ein Band, das
+   abschließt, statt ein zweiter Kopf zu sein. */
 .karten-fuss {
   display: block;
   width: calc(100% + 3.5rem);
   height: auto;
   margin: 1.75rem -1.75rem -1.75rem;
-  aspect-ratio: 4 / 1;
+  aspect-ratio: 6 / 1;
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center 30%;
 }
 
 /* Logo oben rechts im Bild -- dieselbe Stelle wie in der Schüleranwendung. */
@@ -131,6 +132,11 @@ h2 {
    Nachschlagen da sind. Sie teilen sich deshalb dasselbe Aussehen -- leise
    Fläche, dünner Rahmen, linksbündig und fett wie das `summary` -- und heben
    sich damit von den drei Knöpfen darüber ab, ohne laut zu werden. */
+/* Der Satz unter der Überschrift passt so auf eine Zeile. Gemessen: Bei
+   0,92 rem kippt er auf 832 px Kartenbreite um -- 0,9 rem lässt Luft für
+   Systeme, die etwas breiter setzen. */
+.einstieg-karte > .lang { font-size: 0.9rem; }
+
 .einstieg-mehr { display: grid; gap: 0.6rem; margin-top: 1.5rem; }
 
 .anleitung-kurz,
@@ -143,8 +149,20 @@ h2 {
   border-radius: 10px; /* stand vorher nur auf `button`, das <a> blieb eckig */
 }
 
+/* Das schwarze Dreieck des <details> weg -- es war das einzige schwarze
+   Zeichen auf der Karte. Stattdessen rechts ein leiser Winkel, passend zum
+   Pfeil des Verweises darunter: Beide sagen „hier geht es weiter", ohne sich
+   vorzudrängen. `list-style` und der WebKit-Marker müssen beide dran, sonst
+   bleibt das Dreieck in Safari stehen. */
+.anleitung-kurz summary { list-style: none; }
+.anleitung-kurz summary::-webkit-details-marker { display: none; }
+.anleitung-kurz summary::after {
+  content: "▾"; float: right; color: var(--text-leise); font-weight: 400;
+}
+.anleitung-kurz[open] summary::after { content: "▴"; }
+
 .knopf-verweis { display: block; color: var(--text); text-decoration: none; }
-.knopf-verweis::after { content: " →"; color: var(--text-leise); }
+.knopf-verweis::after { content: "→"; float: right; color: var(--text-leise); font-weight: 400; }
 .knopf-verweis em {
   font-style: normal; font-weight: 400; font-size: 0.9rem; color: var(--text-leise);
 }
@@ -715,13 +733,21 @@ textarea:focus-visible { outline: 3px solid var(--stufe); outline-offset: 1px; }
 .zur-startseite:hover { color: var(--text); border-bottom-color: var(--text-leise); }
 .zur-startseite:focus-visible { outline: 3px solid var(--stufe); outline-offset: 3px; }
 
+/* Impressum links, „Zur Startseite" rechts auf derselben Höhe wie die letzte
+   Zeile. `flex-end` richtet den Verweis am unteren Rand des Textblocks aus --
+   er steht damit neben „Verantwortlich: Joscha Falck." und nicht darunter. */
 .fusszeile-klein {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem;
   margin: 1.5rem 0 0;
   font-size: 0.8rem;
   line-height: 1.5;
   color: var(--text-leise);
 }
-.fusszeile-klein a { color: var(--stufe); }
+.fusszeile-klein a { flex: none; color: var(--stufe); }
+
+@media (max-width: 34rem) {
+  .fusszeile-klein { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+}
 @media print { .fusszeile { display: none; } }
 
 .zeitraumwahl { display: inline-flex; align-items: center; gap: 0.4rem;

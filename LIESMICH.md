@@ -213,8 +213,17 @@ den drei Knöpfen darüber ab, ohne laut zu werden. Fläche, Rahmen und Abständ
 bei `.einstieg-mehr` — vorher hatte `.anleitung-kurz` sie für sich, und der Verweis daneben
 blieb eckig, weil `border-radius` nur auf `button` stand und er ein `<a>` ist.
 
-Das Fußband ist mit `object-position: center 40%` beschnitten: Bei 4:1 fällt oben und unten je
-ein Viertel weg; mittig geschnitten wäre der Kompass angeschnitten worden.
+Das Fußband ist **6:1 mit `object-position: center 30%`** — gerechnet, nicht geraten: Auf der
+832 px breiten Karte bleiben davon die Bildzeilen 120 bis 320 von 600 übrig. Kompass, Tasse und
+Karte sind ganz drin, Lineal und Bleistift fallen unten heraus. Ein Band, das abschließt, statt
+ein zweiter Kopf zu sein.
+
+Kleinigkeiten mit Absicht: Der Satz unter der Überschrift steht auf `0.9rem`, damit er auf eine
+Zeile passt (gemessen kippt er bei 0,92 rem). Das schwarze Dreieck des `<details>` ist weg — es
+war das einzige schwarze Zeichen auf der Karte; stattdessen steht rechts ein leiser Winkel,
+passend zum `→` des Verweises darunter. Für Safari braucht es dafür **beides**, `list-style:
+none` und `::-webkit-details-marker`. Im Impressum steht „Zur Startseite" über `flex-end` rechts
+auf Höhe der letzten Zeile, unter 34 rem klappt es untereinander.
 
 Drei Dinge stecken darin, die man leicht wieder kaputtmacht:
 
