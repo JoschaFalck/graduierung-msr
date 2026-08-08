@@ -170,6 +170,20 @@ export function zeitraumFuer(datei, datum = new Date()) {
   return Math.max(1, Math.floor(tage / datei.zyklus.tageJeZeitraum) + 1);
 }
 
+/**
+ * Erster und letzter Tag eines Zeitraums als ISO-Datum. Für Beschriftungen:
+ * „Zeitraum 12" sagt niemandem etwas, „01.03.–14.03." schon.
+ */
+export function zeitraumSpanne(datei, zeitraum) {
+  const von = new Date(`${datei.zyklus.start}T00:00:00`);
+  von.setDate(von.getDate() + (zeitraum - 1) * datei.zyklus.tageJeZeitraum);
+  const bis = new Date(von);
+  bis.setDate(bis.getDate() + datei.zyklus.tageJeZeitraum - 1);
+  const iso = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { von: iso(von), bis: iso(bis) };
+}
+
 /** Zeiträume eines Coaching-Blocks, z. B. [5,6,7,8] für den zweiten Block. */
 export function zeitraeumeDesBlocks(datei, zeitraum) {
   const je = datei.zyklus.zeitraeumeJeCoaching;

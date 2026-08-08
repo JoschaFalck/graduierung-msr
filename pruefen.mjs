@@ -226,6 +226,13 @@ test('Zeitraum wächst alle 14 Tage', () => {
 test('vor dem Start bleibt es Zeitraum 1', () => {
   assert.equal(kd.zeitraumFuer(datei, '2026-08-01'), 1);
 });
+test('Zeitraumspanne nennt ersten und letzten Tag', () => {
+  assert.deepEqual(kd.zeitraumSpanne(datei, 1), { von: '2026-09-14', bis: '2026-09-27' });
+  assert.deepEqual(kd.zeitraumSpanne(datei, 2), { von: '2026-09-28', bis: '2026-10-11' });
+  // dieselbe Grenze wie zeitraumFuer -- die beiden dürfen nie auseinanderlaufen
+  assert.equal(kd.zeitraumFuer(datei, kd.zeitraumSpanne(datei, 5).von), 5);
+  assert.equal(kd.zeitraumFuer(datei, kd.zeitraumSpanne(datei, 5).bis), 5);
+});
 test('Coaching-Block umfasst vier Zeiträume', () => {
   assert.deepEqual(kd.zeitraeumeDesBlocks(datei, 3), [1, 2, 3, 4]);
   assert.deepEqual(kd.zeitraeumeDesBlocks(datei, 5), [5, 6, 7, 8]);

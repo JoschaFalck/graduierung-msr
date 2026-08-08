@@ -307,11 +307,23 @@ button {
 .stufenwahl label:has(input:checked) { border-color: var(--stufe); background: var(--flaeche); }
 .stufenwahl label:has(input:focus-visible) { outline: 3px solid var(--stufe); outline-offset: 2px; }
 
-.stufen-punkt {
-  width: 1.1rem;
-  height: 1.1rem;
+/* Weißer Kreis mit Ring in der Stufenfarbe, darin das Strichsymbol der Stufe.
+   Der weiße Grund bleibt auch im Dunkelmodus -- das Symbol ist ein schwarzes
+   PNG und wäre sonst unsichtbar. */
+.stufen-symbol-feld {
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 50%;
+  border: 2px solid currentColor;
+  background: #fff;
+  display: grid;
+  place-items: center;
   flex: none;
+}
+
+.stufen-symbol-feld img {
+  width: 1.7rem;
+  height: 1.7rem;
 }
 
 .stufen-name { font-weight: 600; }
@@ -999,3 +1011,11 @@ button {
 }
 .neue-stufe-vereinbarung p:last-child,
 .vereinbarung p:last-child { margin: 0; }
+
+/* Rechtliche Verweise in den Fußzeilen -- Impressum muss von jeder Seite aus
+   erreichbar sein, nicht nur von der Startseite. */
+.fuss-rechtliches { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; }
+.fusszeile-klein { display: flex; flex-wrap: wrap; justify-content: space-between;
+                   align-items: flex-end; gap: 0.5rem 1.5rem; }
+.fusszeile-klein .fuss-rechtliches { justify-content: flex-start; gap: 1rem; flex: none; }
+.fusszeile-klein a { color: var(--stufe); }

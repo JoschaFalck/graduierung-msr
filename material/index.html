@@ -6,66 +6,29 @@
 <meta name="theme-color" content="#16506B">
 <title>Analoge Vorlage – Graduierung MS Rednitzhembach</title>
 <link rel="icon" href="../symbole/symbol-192.png" type="image/png">
-<!-- Dieselben Farb- und Schriftfestlegungen wie in der Lehrkraft-Anwendung.
-     Kein eigenes Farbschema: Diese Seite gehört sichtbar dazu. -->
-<link rel="stylesheet" href="../lehrkraft/stil.css">
-<style>
-  .vorlage-kopf { position: relative; border-bottom: 1px solid var(--linie); background: var(--flaeche); }
-  .vorlage-kopf img {
-    display: block; width: 100%; height: auto;
-    aspect-ratio: 4 / 1; max-height: min(300px, 32vh);
-    object-fit: cover; object-position: center bottom;
-  }
-  .vorlage-titel { padding: 1.5rem 1.5rem 0; }
-  .vorlage-titel h1 { margin: 0 0 0.4rem; }
-
-  /* Die Galerie: Vorschaubild über Titel und Format. Das Bild ist Beiwerk --
-     jede Karte trägt ihren Namen als Text, der Verweis hängt an der ganzen
-     Karte, damit auf dem Tablet die Trefferfläche groß ist. */
-  .vorlagen { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
-  @media (min-width: 40rem) { .vorlagen { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 62rem) { .vorlagen { grid-template-columns: repeat(4, 1fr); } }
-
-  .vorlage {
-    display: flex; flex-direction: column;
-    text-decoration: none; color: inherit;
-    background: var(--flaeche); border: 1px solid var(--linie);
-    border-radius: var(--radius); box-shadow: var(--schatten);
-    overflow: hidden;
-  }
-  .vorlage:hover { border-color: var(--stufe); }
-  .vorlage:focus-visible { outline: 3px solid var(--stufe); outline-offset: 2px; }
-
-  .vorlage-bild {
-    display: block; width: 100%; height: auto;
-    border-bottom: 1px solid var(--linie);
-    background: var(--grund);
-  }
-  .vorlage-text { padding: 0.7rem 0.9rem; border-top: 4px solid var(--farbe, var(--linie)); }
-  .vorlage-name { display: block; font-weight: 600; }
-  .vorlage-zusatz { display: block; font-size: 0.85rem; color: var(--text-leise); }
-
-  .vorlage-zurueck { display: inline-flex; gap: 1.25rem; flex-wrap: wrap; margin: 0 0 1.5rem; }
-  .vorlage-zurueck a { color: var(--stufe); }
-</style>
+<!-- Dasselbe Aussehen wie Startseite, Impressum und Datenschutz. -->
+<link rel="stylesheet" href="../seite.css">
 </head>
 <body>
 
-<header class="vorlage-kopf">
+<header class="titelbild">
   <img src="../bilder/header.jpg"
        srcset="../bilder/header.jpg 1600w, ../bilder/header-gross.jpg 2400w"
        sizes="100vw" alt="" width="1600" height="400">
+  <span class="schullogo-feld">
+    <img src="../symbole/schullogo.png" alt="Mittelschule Rednitzhembach" width="900" height="237">
+  </span>
 </header>
 
-<div class="vorlage-titel inhalt">
+<div class="bahn-breit" style="padding: 1.75rem 1.5rem 0">
   <h1>Analoge Vorlage des Graduierungssystems</h1>
   <p class="lang">Das gedruckte Material der Mittelschule Rednitzhembach: die Ausweise der vier
     Lernstufen und die Reflexionsbögen für das Coaching-Gespräch. Alles hier funktioniert ohne
     die Anwendung – zum Ansehen, zum Ausdrucken oder für eine Runde ganz auf Papier.</p>
 </div>
 
-<main class="inhalt">
-  <p class="vorlage-zurueck">
+<main class="bahn-breit">
+  <p class="fuss-verweise" style="margin: 0 0 1.5rem">
     <a href="../lehrkraft/">← Zur Lehrkraft-Anwendung</a>
     <a href="../">Zur Startseite</a>
   </p>
@@ -76,9 +39,16 @@
   <p class="warnfeld" id="abgleich"></p>
 </main>
 
-<footer class="fusszeile">
-  <p>App zum Graduierungssystem der Mittelschule Rednitzhembach,
-    Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.</p>
+<footer class="bahn-breit">
+  <div class="fuss-reihe">
+    <p>Mittelschule Rednitzhembach · Zwischen den Brücken 3 · 91126 Rednitzhembach ·
+      Verantwortlich: Joscha Falck</p>
+    <p class="fuss-verweise">
+      <a href="../">Startseite</a>
+      <a href="../impressum.html">Impressum</a>
+      <a href="../datenschutz.html">Datenschutz</a>
+    </p>
+  </div>
 </footer>
 
 <script type="module">

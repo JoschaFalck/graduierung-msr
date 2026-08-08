@@ -3,6 +3,9 @@
 ```
 app/                       ← dieser Ordner wird als Website veröffentlicht
   index.html                 Startseite mit den beiden Eingängen
+  seite.css                  Aussehen der Seiten außerhalb der Anwendungen
+  impressum.html             ENTWURF -- Platzhalter noch zu füllen
+  datenschutz.html           ENTWURF -- Platzhalter noch zu füllen
   sw.js                      Service Worker (offline-Betrieb)
   symbole/                   App-Symbole (Anker) und Schullogo
   material/                  eigene Seite mit dem analogen Material als PDF
@@ -32,7 +35,7 @@ app/                       ← dieser Ordner wird als Website veröffentlicht
     index.html
     lehrkraft.js
     stil.css
-  pruefen.mjs                90 Prüfungen -- `node app/pruefen.mjs`
+  pruefen.mjs                91 Prüfungen -- `node app/pruefen.mjs`
 ```
 
 Kein Build-Schritt, keine Abhängigkeiten, keine externen Dienste. Reine ES-Module.
@@ -100,9 +103,17 @@ GitHub Pages. Am Mac greift vorher automatisch der Download-Fallback.
 |---|---|
 | `graduierung.schueler.profil` | Name, Klasse, aktuelle Stufe |
 | `graduierung.schueler.verlauf` | die letzten 40 eigenen Selbsteinschätzungen |
+| `graduierung.schueler.entwurf` | die angefangene, noch nicht gesendete Einschätzung |
+| `graduierung.schueler.vereinbarung` | die Vereinbarung aus dem letzten Coaching (per QR übernommen) |
 
-Beides löschbar über „Alles auf diesem Gerät löschen" im Ausweis-Bereich.
+Alles löschbar über „Alles auf diesem Gerät löschen" im Ausweis-Bereich.
 Es verlässt das Gerät nur, was das Kind selbst über „Senden" abschickt.
+
+**Der Entwurf** wird nach jeder Eingabe still mitgeschrieben und beim Öffnen
+wiederhergestellt. Grund: iPadOS wirft Safari-Tabs beim App-Wechsel gern aus dem
+Speicher — ohne Entwurf hieße das „8 von 14 Antworten weg, von vorn". Beim
+Senden wird er gelöscht, ebenso bei einem Stufenwechsel (dann passt er nicht
+mehr zu den Fragen).
 
 ## Service Worker
 
@@ -180,6 +191,11 @@ Zwei Dinge, die dort bewusst so sind:
   (`docs/KRITERIENKATALOG_Entwurf.md`, noch nicht abgenommen). Wer beides nebeneinander nutzt,
   soll das vorher wissen und nicht im Gespräch.
 
+Startseite, Materialübersicht, Impressum und Datenschutz teilen sich **`seite.css`**. Vorher
+standen die Farbwerte doppelt -- inline in `index.html` und in `lehrkraft/stil.css` -- und wären
+beim nächsten Anfassen auseinandergelaufen. Die beiden Anwendungen behalten ihre eigenen
+Stylesheets; sie sind Oberfläche, die vier Seiten sind Dokumente.
+
 **Es gibt ihn an zwei Stellen**, und `gemeinsam/material.js` ist die einzige Aufzählung dahinter:
 
 - `material/index.html` — eine **eigene Seite ohne geöffnete Klasse**, verlinkt von der
@@ -191,6 +207,26 @@ Zwei Dinge, die dort bewusst so sind:
 
 Die Vorschaubilder in `material/vorschau/` sind mit `pypdfium2` aus der ersten Seite jedes PDFs
 gerendert (520 px breit, JPEG). Wird ein PDF ersetzt, gehört das Bild neu erzeugt.
+
+## Impressum und Datenschutz
+
+`impressum.html` und `datenschutz.html` liegen im Wurzelverzeichnis und sind aus **jeder**
+Fußzeile erreichbar -- auch aus beiden Anwendungen, nicht nur von der Startseite.
+
+**Beide sind als ENTWURF gekennzeichnet und noch nicht freigegeben.** Was fehlt, ist rot
+hervorgehoben (`.offen`): Name der Schulleitung, Telefon und E-Mail, Aufsichtsbehörde, Kontakt
+der/des Datenschutzbeauftragten, Aufbewahrungsfrist für Rückstufungsdokumente und das Datum der
+Freigabe. So kann der Text nicht versehentlich unvollständig online gehen.
+
+Zwei inhaltliche Punkte, die man nicht wegkürzen darf:
+
+- **Der Abschnitt zum Hosting.** Die Seiten liegen bei GitHub Pages; beim Abruf gehen
+  IP-Adresse und technische Angaben an diesen Anbieter. Das ist die **einzige** Stelle, an der
+  überhaupt Daten das Gerät verlassen -- und deshalb gehört sie hinein, so kurz der Rest auch
+  ist. Zieht die Schule um, muss der Abschnitt mit.
+- **Keine externen Ressourcen.** Nachgeprüft mit einer Suche über alle HTML-, JS-, CSS- und
+  JSON-Dateien: Es gibt keine einzige `http`-Adresse im Projekt. Keine Schriften, keine Skripte,
+  keine Bilder von fremden Servern. Wer eine einbaut, macht die Datenschutzerklärung falsch.
 
 ## Die beiden Startkarten
 
@@ -573,6 +609,27 @@ Fragment, sonst stellt ein Neuladen dieselbe Frage noch einmal.
 
 Ist die Vereinbarung so lang, dass kein Code mehr passt, wird sie weggelassen und der Code trägt
 nur die Stufe -- lieber das als gar keinen Code.
+
+## Der Klassen-Link als QR-Code und Plakat
+
+Die Anleitung sagt in Schritt 2 „QR-Code an die Wand" — erzeugen musste ihn bisher ein
+fremder Dienst, genau das, was das Projekt sonst vermeidet. Jetzt steht in der Übersicht
+der Knopf **Klassen-Link zeigen**: derselbe Encoder wie beim Stufen-Rückweg
+(`gemeinsam/qr.js`), kodiert wird nur die Adresse der Schüleranwendung mit der Klasse im
+Fragment (`…/schueler/#8a`). Zum Projizieren am Beamer oder über **Als Plakat drucken**
+als Aushang fürs Klassenzimmer.
+
+Das Plakat ist kein eigenes Dokument, sondern derselbe Kasten unter Druckregeln: Der
+Druckknopf setzt `plakat-druck` auf `body`, die Regeln in `lehrkraft/stil.css` blenden
+alles andere aus und ziehen Kopfband (`bilder/header.jpg`), Titel und Code groß auf.
+`afterprint` nimmt die Klasse wieder weg — auch wenn der Druckdialog abgebrochen wurde.
+Zwei Fallen dabei:
+
+- Die allgemeine Druckregel blendet `.hinweis` aus; die Adresse unter dem Code
+  (`#klassencode-adresse`) wird auf dem Plakat per `!important` wieder eingeblendet —
+  sie ist der Rückfall, wenn eine Kamera klemmt.
+- Im normalen Druck (Coaching-Bogen, Auskunft) ist `.klassencode` ausgeblendet, damit
+  er nicht mitten im Bogen auftaucht, falls er noch offen steht.
 
 ## Katalogfassungen
 

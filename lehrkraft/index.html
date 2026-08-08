@@ -61,9 +61,17 @@
       <label class="feld"><span>Namen der Klasse <em>(kann warten)</em></span>
         <textarea id="neu-namen" rows="4"
                   placeholder="Ein Name je Zeile – oder leer lassen und die Liste beim ersten Einsammeln aufbauen."></textarea></label>
-      <label class="feld"><span>Passwort für die Datei</span>
-        <input type="password" id="neu-passwort" autocomplete="new-password">
-        <span class="zaehler" id="neu-guete"></span></label>
+      <!-- Zweimal eingeben wie beim Passwortwechsel: Ein Tippfehler hier ist das
+           einzige wirklich Unumkehrbare -- die Lehrkraft notiert sich das
+           gewollte Passwort, die Datei trägt das vertippte, und beim zweiten
+           Öffnen ist die Klasse zu. -->
+      <div class="zwei-spalten">
+        <label class="feld"><span>Passwort für die Datei</span>
+          <input type="password" id="neu-passwort" autocomplete="new-password">
+          <span class="zaehler" id="neu-guete"></span></label>
+        <label class="feld"><span>Noch einmal</span>
+          <input type="password" id="neu-passwort-wdh" autocomplete="new-password"></label>
+      </div>
       <!-- Stand vorher als leiser `.hinweis` unter dem Feld. Was hier schiefgeht,
            ist aber nicht klein: Die Datei ist AES-verschlüsselt, ohne Passwort
            gibt es keinen Weg zurück -- auch nicht für mich. -->
@@ -118,7 +126,10 @@
     <p class="fusszeile-klein">
       <span>App zum Graduierungssystem der Mittelschule Rednitzhembach,
         Zwischen den Brücken 3, 91126 Rednitzhembach. Verantwortlich: Joscha Falck.</span>
-      <a href="../">Zur Startseite</a></p>
+      <span class="fuss-rechtliches">
+        <a href="../">Zur Startseite</a>
+        <a href="../impressum.html">Impressum</a>
+        <a href="../datenschutz.html">Datenschutz</a></span></p>
 
     <!-- Abschlussband: dasselbe Motiv, das vorher oben stand. -->
     <img class="karten-fuss" src="../bilder/einstieg-lehrkraft.jpg" alt=""
@@ -164,6 +175,26 @@
     <section class="ansicht" id="ansicht-uebersicht">
       <div class="werkzeuge">
         <button type="button" class="knopf-klein" id="kind-anlegen">+ Kind hinzufügen</button>
+        <button type="button" class="knopf-klein" id="klassencode-zeigen">Klassen-Link zeigen</button>
+      </div>
+
+      <!-- Der Weg der Kinder in die Schüleranwendung (Anleitung Schritt 2):
+           Code an die Wand projizieren oder als Plakat ins Klassenzimmer
+           hängen. Das Kopfband und die große Schrift sind nur im Druck
+           sichtbar -- am Bildschirm bleibt der Kasten schlicht. -->
+      <div class="klassencode" id="klassencode" hidden>
+        <img class="klassencode-band" src="../bilder/header.jpg" alt="" width="1600" height="400">
+        <h3 class="klassencode-titel">Meine Selbsteinschätzung</h3>
+        <p class="klassencode-unter" id="klassencode-unter">–</p>
+        <div id="klassencode-bild"></div>
+        <p class="klassencode-anleitung">Scanne den Code mit der Kamera deines iPads –
+          deine Klasse ist schon eingetragen.</p>
+        <p class="hinweis" id="klassencode-adresse"></p>
+        <p class="klassencode-fuss">Graduierungssystem der Mittelschule Rednitzhembach</p>
+        <div class="klassencode-knoepfe">
+          <button type="button" class="knopf-klein" id="klassencode-drucken">Als Plakat drucken</button>
+          <button type="button" class="knopf-klein" id="klassencode-zu">Schließen</button>
+        </div>
       </div>
       <p class="punktlegende">Ein Punkt je Zeitraum des Blocks:
         <span class="punkt beide" aria-hidden="true"></span> beides da ·
@@ -458,7 +489,11 @@
     <p>App zum Graduierungssystem der Mittelschule Rednitzhembach ·
       Zwischen den Brücken 3 · 91126 Rednitzhembach ·
       Verantwortlich: Joscha Falck</p>
-    <p><a class="zur-startseite" href="../">Zur Startseite</a></p>
+    <p class="fuss-rechtliches">
+      <a class="zur-startseite" href="../">Zur Startseite</a>
+      <a href="../impressum.html">Impressum</a>
+      <a href="../datenschutz.html">Datenschutz</a>
+    </p>
   </footer>
 
   <nav class="navigation" aria-label="Bereiche">

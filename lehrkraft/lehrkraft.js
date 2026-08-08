@@ -73,6 +73,15 @@ async function starten() {
     coachingSpeichern();
   });
   $('#kind-anlegen').addEventListener('click', kindAnlegen);
+  $('#klassencode-zeigen').addEventListener('click', klassencodeZeigen);
+  $('#klassencode-zu').addEventListener('click', () => { $('#klassencode').hidden = true; });
+  $('#klassencode-drucken').addEventListener('click', () => {
+    document.body.classList.add('plakat-druck');
+    window.print();
+  });
+  // Nach jedem Druck zurück in die normale Ansicht -- auch wenn der
+  // Druckdialog abgebrochen wurde.
+  window.addEventListener('afterprint', () => document.body.classList.remove('plakat-druck'));
   dateiVerdrahten();
   $('#leiste-zeitraum').addEventListener('change', (e) => {
     zeitraumWahl = Number(e.target.value);
@@ -150,6 +159,7 @@ async function klasseAnlegen() {
   const schuljahr = $('#neu-schuljahr').value.trim();
   const start = $('#neu-start').value;
   const pw = $('#neu-passwort').value;
+  const wdh = $('#neu-passwort-wdh').value;
   const meldung = $('#neu-fehler');
 
   const fehlt = [];
@@ -160,6 +170,12 @@ async function klasseAnlegen() {
   if (fehlt.length) {
     meldung.textContent = `Es fehlt noch: ${fehlt.join(', ')}.`;
     meldung.hidden = false;
+    return;
+  }
+  if (pw !== wdh) {
+    meldung.textContent = 'Die beiden Eingaben sind nicht gleich.';
+    meldung.hidden = false;
+    $('#neu-passwort-wdh').focus();
     return;
   }
   meldung.hidden = true;
@@ -792,6 +808,12 @@ function aktuellerZeitraum() {
   return zeitraumWahl ?? kd.zeitraumFuer(datei);
 }
 
+/** „01.03.–14.03." -- macht aus der nackten Zeitraumnummer ein Datum. */
+function zeitraumDaten(zeitraum) {
+  const spanne = kd.zeitraumSpanne(datei, zeitraum);
+  return `${datumKurz(spanne.von)}–${datumKurz(spanne.bis)}`;
+}
+
 function zeitraumwahlZeichnen() {
   const heute = kd.zeitraumFuer(datei);
   // so weit, wie Daten reichen -- mindestens bis heute, plus eine Reserve
@@ -802,7 +824,7 @@ function zeitraumwahlZeichnen() {
     .map((z) => {
       const merkmal = z === heute ? ' · heute' : '';
       const coaching = kd.coachingFaellig(datei, z) ? ' · Coaching' : '';
-      return `<option value="${z}">${z}${merkmal}${coaching}</option>`;
+      return `<option value="${z}">${z} · ${zeitraumDaten(z)}${merkmal}${coaching}</option>`;
     })
     .join('');
 
@@ -1197,7 +1219,7 @@ function zeitraumtabelleZeichnen(kind) {
 
     zeilen.push(`
       <tr>
-        <th scope="row">${z}</th>
+        <th scope="row">${z} <span class="zeitraum-datum">${zeitraumDaten(z)}</span></th>
         <td>${bilanz(selbst?.bewertungen, kriterienIds)}</td>
         <td>${bilanz(fremd?.bewertungen, zeilenIds)}</td>
         <td class="beleg-spalte">${selbst?.beleg?.text ? escapen(selbst.beleg.text) : '<span class="leise">–</span>'}</td>
@@ -1621,6 +1643,30 @@ function stufencodeZeigen(kind) {
   kasten.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+/**
+ * Der Klassen-Link als QR-Code (Anleitung Schritt 2). Bisher sagte die
+ * Anleitung „QR-Code an die Wand", aber erzeugen musste ihn ein fremder
+ * Dienst -- genau das, was das Projekt sonst vermeidet. Der Code trägt nur
+ * die Adresse der Schüleranwendung mit der Klasse im Fragment
+ * (`…/schueler/#8a`); die iPad-Kamera öffnet die Seite von selbst.
+ *
+ * Über „Als Plakat drucken" wird derselbe Kasten zum Aushang: Die Druckregeln
+ * unter `body.plakat-druck` blenden alles andere aus und ziehen Titel und
+ * Code groß auf (stil.css).
+ */
+function klassencodeZeigen() {
+  const kasten = $('#klassencode');
+  const adresse = new URL('../schueler/', location.href);
+  adresse.hash = datei.klasse;
+
+  $('#klassencode-unter').textContent = `Klasse ${datei.klasse} · alle zwei Wochen`;
+  $('#klassencode-bild').innerHTML = qrAlsSvg(adresse.href, { kachel: 6 });
+  $('#klassencode-adresse').textContent = adresse.href;
+
+  kasten.hidden = false;
+  kasten.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 /** Coaching-Bereich ohne gewähltes Kind: nur die Auswahl. */
 function coachingBereitZeigen() {
   coachingKind = null;
@@ -1747,7 +1793,7 @@ function importErgebnisZeichnen(ergebnisse) {
   const zeitraum = aktuellerZeitraum();
   const fehlen = kd.fehlendeSelbsteinschaetzungen(datei, zeitraum);
   $('#import-fehlliste').innerHTML = fehlen.length
-    ? `<h2>Fehlt noch in Zeitraum ${zeitraum} (${fehlen.length})</h2>
+    ? `<h2>Fehlt noch in Zeitraum ${zeitraum} · ${zeitraumDaten(zeitraum)} (${fehlen.length})</h2>
        <div class="meldungen">${fehlen.map((l) => meldung('offen', l.name, '')).join('')}</div>`
     : `<p class="leer"><img class="leer-bild" src="../bilder/alles-da.png" alt=""
          width="512" height="341">Alle Selbsteinschätzungen für Zeitraum ${zeitraum} sind da.</p>`;

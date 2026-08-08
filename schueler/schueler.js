@@ -7,6 +7,7 @@ import { uebergabeErzeugen, dateiname } from '../gemeinsam/uebergabe.js';
 
 const SCHLUESSEL_PROFIL = 'graduierung.schueler.profil';
 const SCHLUESSEL_VERLAUF = 'graduierung.schueler.verlauf';
+const SCHLUESSEL_ENTWURF = 'graduierung.schueler.entwurf';
 const VERLAUF_MAX = 40;
 const BELEG_MINDESTLAENGE = 10;
 
@@ -44,6 +45,60 @@ function verlaufLesen() {
 function verlaufErgaenzen(uebergabe) {
   const liste = [uebergabe, ...verlaufLesen()].slice(0, VERLAUF_MAX);
   localStorage.setItem(SCHLUESSEL_VERLAUF, JSON.stringify(liste));
+}
+
+// Angefangene Einschätzungen leben sonst nur im Formular -- und iPadOS wirft
+// Safari-Tabs beim App-Wechsel gern aus dem Speicher. Ohne Entwurf hieße das:
+// 8 von 14 Antworten weg, von vorn. Deshalb wird nach jeder Eingabe still
+// mitgeschrieben und beim Öffnen wiederhergestellt; gesendet wird dadurch
+// nichts, der Entwurf bleibt auf dem Gerät wie alles andere.
+
+function entwurfLesen() {
+  try {
+    const roh = localStorage.getItem(SCHLUESSEL_ENTWURF);
+    return roh ? JSON.parse(roh) : null;
+  } catch {
+    return null;
+  }
+}
+
+function entwurfSchreiben() {
+  const { bewertungen, beleg } = formularEinlesen();
+  if (!Object.keys(bewertungen).length && !beleg.kriteriumId && !beleg.text) {
+    entwurfLoeschen();
+    return;
+  }
+  localStorage.setItem(
+    SCHLUESSEL_ENTWURF,
+    JSON.stringify({ stufe: profil.stufe, bewertungen, beleg })
+  );
+}
+
+function entwurfLoeschen() {
+  localStorage.removeItem(SCHLUESSEL_ENTWURF);
+}
+
+/** Setzt einen gemerkten Entwurf zurück ins frisch gezeichnete Formular. */
+function entwurfHerstellen() {
+  const entwurf = entwurfLesen();
+  if (!entwurf) return;
+
+  // Nach einem Stufenwechsel passt der alte Entwurf nicht mehr zu den Fragen
+  if (entwurf.stufe !== profil.stufe) {
+    entwurfLoeschen();
+    return;
+  }
+
+  for (const [id, wert] of Object.entries(entwurf.bewertungen ?? {})) {
+    const feld = $(`input[name="k_${id}"][value="${wert}"]`);
+    if (feld) feld.checked = true;
+  }
+  if (entwurf.beleg?.kriteriumId) $('#beleg-kriterium').value = entwurf.beleg.kriteriumId;
+  if (entwurf.beleg?.text) {
+    $('#beleg-text').value = entwurf.beleg.text;
+    $('#beleg-zaehler').textContent = `${entwurf.beleg.text.length} Zeichen`;
+  }
+  fortschrittZeichnen();
 }
 
 // ---------------------------------------------------------------- Start
@@ -200,6 +255,7 @@ function testmodusVerdrahten() {
   $('#test-neu').addEventListener('click', () => {
     localStorage.removeItem(SCHLUESSEL_PROFIL);
     localStorage.removeItem(SCHLUESSEL_VERLAUF);
+    entwurfLoeschen();
     profil = null;
     $('#eingabe-name').value = '';
     einrichtungOeffnen();
@@ -224,12 +280,18 @@ function testleisteZeichnen() {
 
 function einrichtungVerdrahten() {
   const wahl = $('#stufenwahl');
+  // Das Stufensymbol statt eines bloßen Farbpunkts: Die Kinder haben ihren
+  // Ausweis vor sich, und das Bild trägt beim Wiedererkennen mehr als das Wort
+  // -- gerade für DaZ-Kinder. Der weiße Kreis hält das schwarze Strichsymbol
+  // auch im Dunkelmodus sichtbar, der Ring bringt die Stufenfarbe.
   wahl.innerHTML = katalog.stufen
     .map(
       (s) => `
       <label>
         <input type="radio" name="stufe" value="${s.id}">
-        <span class="stufen-punkt" style="background:${s.farbe}"></span>
+        <span class="stufen-symbol-feld" style="border-color:${s.farbe}">
+          <img src="../symbole/stufen/${s.id}.png" alt="" width="160" height="160">
+        </span>
         <span class="stufen-name">${s.name}<span class="stufen-motto">${s.motto}</span></span>
       </label>`
     )
@@ -363,6 +425,7 @@ function allesLoeschen() {
   localStorage.removeItem(SCHLUESSEL_PROFIL);
   localStorage.removeItem(SCHLUESSEL_VERLAUF);
   localStorage.removeItem(SCHLUESSEL_VEREINBARUNG);
+  entwurfLoeschen();
   profil = null;
   einrichtungOeffnen();
   $('#eingabe-name').value = '';
@@ -400,6 +463,7 @@ function formularZeichnen() {
   $('#beleg-zaehler').textContent = '0 Zeichen';
   $('#einschaetzung-fehler').hidden = true;
   fortschrittZeichnen();
+  entwurfHerstellen();
 }
 
 function kriteriumFeld(k, nummer) {
@@ -447,7 +511,9 @@ function fortschrittZeichnen() {
 function formularVerdrahten() {
   $('#beleg-text').addEventListener('input', (ereignis) => {
     $('#beleg-zaehler').textContent = `${ereignis.target.value.trim().length} Zeichen`;
+    entwurfSchreiben();
   });
+  $('#beleg-kriterium').addEventListener('change', entwurfSchreiben);
 
   $('#formular-einschaetzung').addEventListener('submit', (ereignis) => {
     ereignis.preventDefault();
@@ -457,6 +523,7 @@ function formularVerdrahten() {
   $('#kriterien-liste').addEventListener('change', (ereignis) => {
     ereignis.target.closest('.kriterium')?.classList.remove('offen');
     fortschrittZeichnen();
+    entwurfSchreiben();
   });
 }
 
@@ -526,6 +593,7 @@ async function absenden() {
   if (!erfolg) return;
 
   verlaufErgaenzen(uebergabe);
+  entwurfLoeschen(); // vor dem Neuzeichnen, sonst stünde alles gleich wieder da
   formularZeichnen();
   verlaufZeichnen();
   $('#tipp-merken').hidden = alsAppInstalliert();

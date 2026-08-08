@@ -7,87 +7,14 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Graduierung – MS Rednitzhembach</title>
 <link rel="icon" href="symbole/symbol-192.png" type="image/png">
+<link rel="stylesheet" href="seite.css">
 <style>
-  :root { --blau: #16506B; --grund: #f4f6f8; --flaeche: #fff;
-          --text: #1b2733; --leise: #5a6b7b; --linie: #d8dee4; }
-  @media (prefers-color-scheme: dark) {
-    :root { --grund: #12181e; --flaeche: #1c242c; --text: #e8eef4; --leise: #9fb0c0;
-            --linie: #33404c; --blau: #4a9ec4; }
-  }
-  * { box-sizing: border-box; }
-  /* Spalte über die volle Fensterhöhe: bleibt unter dem Bild Platz übrig, verteilt
-     ihn `main` gleichmäßig, statt den Inhalt oben kleben zu lassen. Bei kleinen
-     Fenstern wächst die Seite wie gewohnt und scrollt. */
-  body {
-    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
-    background: var(--grund); color: var(--text);
-    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  }
-
-  /* Gemeinsame Breite von Inhalt und Fußzeile. Das Titelbild läuft darüber
-     randlos über den ganzen Bildschirm. */
-  .bahn { width: min(60rem, 100%); margin-inline: auto; }
-
-  /* Das Bild läuft randlos über die volle Breite und behält per aspect-ratio sein
-     Seitenverhältnis von 4:1 -- so wird nichts beschnitten. Eine feste Höhe darf hier
-     nicht zurückkommen, genau daran ist der Ausschnitt zuvor zerschnitten worden.
-     Das max-height deckelt zweifach: 430 px auf sehr breiten Bildschirmen, 45 vh in
-     flachen Fenstern -- so bleibt die Startseite ohne Scrollen sichtbar. Wo gedeckelt
-     wird, sorgt `object-position: center bottom` dafür, dass ausschließlich oben Himmel
-     wegfällt; Kai, Anker, Boje und Segelboot bleiben vollständig. */
-  /* flex: none -- sonst staucht die Spalte oben das Bild, wenn der Inhalt
-     darunter einmal höher wird als das Fenster. */
-  .titelbild { flex: none; position: relative; border-bottom: 1px solid var(--linie);
-               background: var(--flaeche); }
-  .titelbild img {
-    display: block; width: 100%; height: auto; aspect-ratio: 4 / 1;
-    max-height: min(430px, 45vh); object-fit: cover; object-position: center bottom;
-  }
-
-  /* Logo oben rechts im Bild -- dieselbe Stelle wie in der Schüleranwendung
-     („Mein Ausweis"). Das helle Feld hält die schwarze Brücke lesbar. */
-  .schullogo-feld {
-    position: absolute; top: 1.1rem; right: 1.1rem;
-    display: block; padding: 0.45rem 0.6rem;
-    background: #fff; border-radius: 10px;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
-  }
-  .schullogo-feld img { display: block; width: 150px; height: auto; }
-  @media (max-width: 26rem) {
-    .schullogo-feld { top: 0.6rem; right: 0.6rem; padding: 0.35rem 0.45rem; }
-    .schullogo-feld img { width: 116px; }
-  }
-
-  main { flex: 1; display: flex; flex-direction: column; justify-content: center;
-         padding: 2.25rem 1.5rem 1rem; text-align: center; }
-
-  h1 { font-size: clamp(1.15rem, 0.9rem + 1.1vw, 1.5rem); margin: 0 0 1.75rem;
-       line-height: 1.3; }
-
-  /* Ab 34 rem stehen die beiden Eingänge nebeneinander und sind gleich hoch. */
-  .eingaenge { display: grid; gap: 1rem; }
-  @media (min-width: 34rem) { .eingaenge { grid-template-columns: 1fr 1fr; } }
-
-  a.eingang {
-    display: block; background: var(--flaeche); color: inherit; text-decoration: none;
-    border: 1px solid var(--linie); border-left: 6px solid var(--blau); border-radius: 14px;
-    padding: 1.35rem 1.5rem; text-align: left;
-    box-shadow: 0 1px 3px rgb(20 40 60 / 10%);
-    transition: box-shadow 0.15s, transform 0.15s;
-  }
-  a.eingang strong { display: block; font-size: 1.15rem; margin-bottom: 0.2rem; }
-  a.eingang span { color: var(--leise); font-size: 0.95rem; }
-  a.eingang:hover { box-shadow: 0 4px 14px rgb(20 40 60 / 16%); transform: translateY(-2px); }
-  a.eingang:focus-visible { outline: 3px solid var(--blau); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) {
-    a.eingang { transition: none; }
-    a.eingang:hover { transform: none; }
-  }
-
-  .hinweis { margin: 2rem 0 0; color: var(--leise); font-size: 0.9rem; }
-  footer { flex: none; padding: 0.5rem 1.5rem 2.5rem;
-           text-align: center; color: var(--leise); font-size: 0.82rem; line-height: 1.6; }
-  footer p { margin: 0; }
+  /* Nur die Startseite: Der Inhalt sitzt unter dem Bild statt in der Mitte zu
+     schweben -- vorher verteilte `justify-content: center` den Platz nach oben
+     und unten, und auf breiten Bildschirmen stand der Block im Nichts. */
+  main { text-align: center; padding-bottom: 3rem; }
+  .eingaenge { text-align: left; }
+  .startseite-hinweis { margin: 1.75rem 0 0; color: var(--leise); font-size: 0.95rem; }
 </style>
 </head>
 <body>
@@ -106,6 +33,8 @@
 
 <main class="bahn">
   <h1>App zum Graduierungssystem der Mittelschule Rednitzhembach</h1>
+  <p class="lang">Selbsteinschätzung, Fremdeinschätzung und Coaching-Gespräch –
+    alle vierzehn Tage, für die vier Lernstufen vom Hafen bis auf die Freie See.</p>
 
   <div class="eingaenge">
     <a class="eingang" href="schueler/">
@@ -119,12 +48,23 @@
     </a>
   </div>
 
-  <p class="hinweis">Alle Daten bleiben auf dem jeweiligen Gerät.</p>
+  <a class="eingang-leise" href="material/">
+    <strong>Analoge Vorlage</strong>
+    <em> – Ausweise und Reflexionsbögen zum Ansehen und Drucken</em>
+  </a>
+
+  <p class="startseite-hinweis">Alle Daten bleiben auf dem jeweiligen Gerät.</p>
 </main>
 
 <footer class="bahn">
-  <p>Mittelschule Rednitzhembach · Zwischen den Brücken 3 · 91126 Rednitzhembach ·
-    Verantwortlich: Joscha Falck</p>
+  <div class="fuss-reihe">
+    <p>Mittelschule Rednitzhembach · Zwischen den Brücken 3 · 91126 Rednitzhembach ·
+      Verantwortlich: Joscha Falck</p>
+    <p class="fuss-verweise">
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+    </p>
+  </div>
 </footer>
 
 </body>

@@ -482,7 +482,10 @@ button { font: inherit; cursor: pointer; border-radius: 8px; }
 .zeitraumtabelle thead th {
   font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-leise);
 }
-.zeitraumtabelle tbody th { font-weight: 600; width: 5rem; }
+.zeitraumtabelle tbody th { font-weight: 600; width: 9rem; }
+/* Das Datum unter der Nummer -- „Zeitraum 9" allein sagt niemandem etwas. */
+.zeitraum-datum { display: block; font-size: 0.78rem; font-weight: 400;
+                  color: var(--text-leise); white-space: nowrap; }
 .zeitraumtabelle tr:last-child td, .zeitraumtabelle tr:last-child th { border-bottom: 0; }
 .beleg-spalte { color: var(--text-leise); font-style: italic; max-width: 26rem; }
 
@@ -844,3 +847,51 @@ code { padding: 0.1rem 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo
 .stufencode .knopf-leise { max-width: 14rem; margin-inline: auto; }
 
 @media print { .stufencode { display: none; } }
+
+/* ---------- Klassen-Link (QR) und Plakat ---------- */
+
+/* Am Bildschirm ein schlichter Kasten wie der Stufencode. Kopfband und
+   Fußzeile gehören zum Plakat und bleiben hier unsichtbar. */
+.klassencode {
+  margin-bottom: 1rem; padding: 1.1rem 1.2rem;
+  text-align: center;
+  background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+}
+.klassencode-band { display: none; }
+.klassencode-titel { margin: 0 0 0.2rem; font-size: 1.1rem; }
+.klassencode-unter { margin: 0 0 1rem; color: var(--text-leise); }
+.klassencode svg { width: min(18rem, 70vw); height: auto; }
+.klassencode-anleitung { margin: 0.8rem auto 0; max-width: 32rem; }
+#klassencode-adresse { overflow-wrap: anywhere; margin: 0.4rem auto 0; max-width: 32rem; }
+.klassencode-fuss { display: none; }
+.klassencode-knoepfe { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+
+@media print {
+  /* Im normalen Druck (Coaching-Bogen, Auskunft) hat der Kasten nichts verloren … */
+  .klassencode { display: none; }
+
+  /* … als Plakat ist er das Einzige auf dem Blatt. Die Klasse `plakat-druck`
+     setzt der Druckknopf am Kasten und nimmt sie nach dem Druck wieder weg. */
+  body.plakat-druck :is(.kopf, .werkzeuge, .punktlegende, #klassenliste) { display: none !important; }
+  body.plakat-druck .klassencode {
+    display: block; margin: 0; padding: 0;
+    border: 0; box-shadow: none; background: none;
+  }
+  body.plakat-druck .klassencode-band { display: block; width: 100%; height: auto; margin-bottom: 1.2cm; }
+  body.plakat-druck .klassencode-titel { font-size: 30pt; margin: 0 0 0.3cm; }
+  body.plakat-druck .klassencode-unter { font-size: 15pt; margin-bottom: 1cm; }
+  body.plakat-druck .klassencode svg { width: 11cm; }
+  body.plakat-druck .klassencode-anleitung { font-size: 13pt; max-width: none; margin-top: 1cm; }
+  /* Die Adresse zum Abtippen: die allgemeine Druckregel blendet .hinweis aus,
+     auf dem Plakat soll sie stehen. */
+  body.plakat-druck #klassencode-adresse { display: block !important; font-size: 10pt; }
+  body.plakat-druck .klassencode-fuss { display: block; margin-top: 1.2cm; font-size: 10pt; color: #555; }
+  body.plakat-druck .klassencode-knoepfe { display: none; }
+}
+
+/* Rechtliche Verweise in den Fußzeilen -- Impressum muss von jeder Seite aus
+   erreichbar sein, nicht nur von der Startseite. */
+.fuss-rechtliches { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; }
+.fusszeile-klein .fuss-rechtliches { justify-content: flex-start; gap: 1rem; flex: none; }
+.fusszeile-klein .fuss-rechtliches a { color: var(--stufe); }
